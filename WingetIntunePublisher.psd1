@@ -30,7 +30,6 @@
     RequiredModules   = @(
         'Microsoft.Graph.Authentication'
         'SvRooij.ContentPrep.Cmdlet'
-        'Microsoft.PowerShell.ConsoleGuiTools'
     )
 
     # Functions to export from this module

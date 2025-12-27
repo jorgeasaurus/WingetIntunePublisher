@@ -27,7 +27,8 @@ Force deployment even if the app already exists in Intune.
     [CmdletBinding()]
     param
     (
-        [string[]]$appid = @(),
+        [Parameter(Mandatory = $true)]
+        [string[]]$appid,
         [string[]]$appname = @(),
         [string]$tenant = "",
         [string]$clientid = "",
@@ -60,7 +61,6 @@ Force deployment even if the app already exists in Intune.
     @(
         'Microsoft.Graph.Authentication'
         'SvRooij.ContentPrep.Cmdlet'
-        'Microsoft.PowerShell.ConsoleGuiTools'
     ) | ForEach-Object {
         Assert-ModuleInstalled -ModuleName $_
     }
@@ -77,42 +77,75 @@ Force deployment even if the app already exists in Intune.
     }
     Write-IntuneLog "Graph connection established"
 
-    if ($appid -and $appid.Count -gt 0) {
-        $packs = @()
-        for ($i = 0; $i -lt $appid.Count; $i++) {
-            $resolvedName = if ($appname.Count -gt $i -and $appname[$i]) {
-                $appname[$i]
-            } elseif ($appname.Count -eq 1 -and $appname[0]) {
-                $appname[0]
-            } else {
-                $null
-            }
+    # Resolve names and correct casing for each appid
+    $packs = @()
+    for ($i = 0; $i -lt $appid.Count; $i++) {
+        $resolvedName = if ($appname.Count -gt $i -and $appname[$i]) {
+            $appname[$i]
+        } elseif ($appname.Count -eq 1 -and $appname[0]) {
+            $appname[0]
+        } else {
+            $null
+        }
 
-            if (-not $resolvedName -and (Get-Command Find-WinGetPackage -ErrorAction SilentlyContinue)) {
-                try {
-                    $pkg = Find-WinGetPackage -Id $appid[$i] -Exact -AcceptSourceAgreement
-                    if ($pkg -and $pkg[0].Name) {
-                        $resolvedName = $pkg[0].Name
+        $correctedId = $appid[$i]  # Start with the original ID
+
+        if (Get-Command Find-WinGetPackage -ErrorAction SilentlyContinue) {
+            try {
+                Write-Host "Resolving package info for: $($appid[$i])" -ForegroundColor Gray
+
+                # Try exact match first
+                $pkg = Find-WinGetPackage -Id $appid[$i] -Exact -AcceptSourceAgreement -ErrorAction SilentlyContinue 2>$null
+
+                # If exact match fails, try finding case-insensitive match
+                if (-not $pkg) {
+                    Write-Host "  Exact match failed, trying case-insensitive search..." -ForegroundColor Gray
+                    $allPkgs = Find-WinGetPackage -Id $appid[$i] -AcceptSourceAgreement -ErrorAction SilentlyContinue 2>$null
+
+                    if ($allPkgs) {
+                        Write-Host "  Found $($allPkgs.Count) potential matches" -ForegroundColor Gray
+                        $pkg = $allPkgs | Where-Object { $_.Id -ieq $appid[$i] } | Select-Object -First 1
+
+                        if (-not $pkg -and $allPkgs.Count -gt 0) {
+                            # If no case-insensitive match, show what was found and use first result
+                            Write-Host "  Available packages:" -ForegroundColor Yellow
+                            $allPkgs | Select-Object -First 5 | ForEach-Object { Write-Host "    - $($_.Id): $($_.Name)" -ForegroundColor Yellow }
+                            $pkg = $allPkgs[0]
+                        }
                     }
-                } catch {
-                    $resolvedName = $null
                 }
-            }
 
-            if (-not $resolvedName) {
-                $resolvedName = $appid[$i]
-            }
+                if ($pkg) {
+                    Write-Host "  Found package: $($pkg.Id)" -ForegroundColor Green
 
-            $packs += [pscustomobject]@{
-                Id   = $appid[$i].Trim()
-                Name = $resolvedName.Trim()
+                    # Auto-correct the App ID casing
+                    if ($pkg.Id -ne $appid[$i]) {
+                        Write-Host "Auto-correcting App ID casing: '$($appid[$i])' → '$($pkg.Id)'" -ForegroundColor Cyan
+                        $correctedId = $pkg.Id
+                    }
+
+                    # Resolve display name if not already provided
+                    if (-not $resolvedName -and $pkg.Name) {
+                        $resolvedName = $pkg.Name
+                        Write-Host "  Resolved name: $resolvedName" -ForegroundColor Green
+                    }
+                } else {
+                    Write-Host "  No package found for ID: $($appid[$i])" -ForegroundColor Yellow
+                }
+            } catch {
+                Write-Warning "Failed to resolve package info for $($appid[$i]): $_"
             }
         }
-    } else {
-        Write-Progress "Loading Winget Packages" -PercentComplete 1
-        $packs2 = Find-WinGetPackage '""' # This logic appears to not work, better to remove #TODO
-        Write-Progress "Loading Winget Packages" -Completed
-        $packs = $packs2 | Out-ConsoleGridView -Title "Available Applications" -OutputMode Multiple
+
+        if (-not $resolvedName) {
+            Write-Warning "Could not resolve display name for '$correctedId'. Using App ID as display name."
+            $resolvedName = $correctedId
+        }
+
+        $packs += [pscustomobject]@{
+            Id   = $correctedId.Trim()
+            Name = $resolvedName.Trim()
+        }
     }
 
     foreach ($pack in $packs) {

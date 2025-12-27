@@ -1,7 +1,6 @@
 $moduleNames = @(
     'Microsoft.Graph.Authentication',
-    'SvRooij.ContentPrep.Cmdlet',
-    'Microsoft.PowerShell.ConsoleGuiTools'
+    'SvRooij.ContentPrep.Cmdlet'
 )
 
 foreach ($name in $moduleNames) {

@@ -40,10 +40,10 @@ Invoke-WingetIntunePublisher -appid "Google.Chrome" -tenant $tenantId -clientid 
 
 ## Deploy Popular Apps by Category
 
-The module includes curated collections of 86 popular enterprise applications organized by category.
+The module includes curated collections of 74 popular enterprise applications organized by category.
 
 ```powershell
-# Deploy all browsers (8 apps)
+# Deploy all browsers (6 apps)
 Invoke-PopularAppsDeployment -Category Browsers
 
 # Deploy all development tools (14 apps)
@@ -64,18 +64,16 @@ Invoke-PopularAppsDeployment -Category Media -Tenant "contoso.onmicrosoft.com" -
 
 ### Available Categories
 
-#### Browsers (8 apps)
+#### Browsers (6 apps)
 
 | App Name | WinGet Package ID |
 |----------|-------------------|
 | Google Chrome | `Google.Chrome` |
 | Mozilla Firefox | `Mozilla.Firefox` |
 | Microsoft Edge | `Microsoft.Edge` |
-| Brave Browser | `BraveSoftware.BraveBrowser` |
 | Opera | `Opera.Opera` |
 | Vivaldi | `Vivaldi.Vivaldi` |
 | LibreWolf | `LibreWolf.LibreWolf` |
-| Chromium | `Chromium.Chromium` |
 
 #### Productivity (10 apps)
 
@@ -92,7 +90,7 @@ Invoke-PopularAppsDeployment -Category Media -Tenant "contoso.onmicrosoft.com" -
 | Sumatra PDF | `SumatraPDF.SumatraPDF` |
 | Evernote | `Evernote.Evernote` |
 
-#### Communication (9 apps)
+#### Communication (7 apps)
 
 | App Name | WinGet Package ID |
 |----------|-------------------|
@@ -102,9 +100,7 @@ Invoke-PopularAppsDeployment -Category Media -Tenant "contoso.onmicrosoft.com" -
 | Discord | `Discord.Discord` |
 | Cisco Webex | `Cisco.CiscoWebexMeetings` |
 | RingCentral | `RingCentral.RingCentral` |
-| Skype | `Microsoft.Skype` |
 | Telegram Desktop | `Telegram.TelegramDesktop` |
-| WhatsApp | `WhatsApp.WhatsApp` |
 
 #### Development (14 apps)
 
@@ -125,7 +121,7 @@ Invoke-PopularAppsDeployment -Category Media -Tenant "contoso.onmicrosoft.com" -
 | NVM for Windows | `CoreyButler.NVMforWindows` |
 | PowerShell | `Microsoft.PowerShell` |
 
-#### Media (9 apps)
+#### Media (8 apps)
 
 | App Name | WinGet Package ID |
 |----------|-------------------|
@@ -137,7 +133,6 @@ Invoke-PopularAppsDeployment -Category Media -Tenant "contoso.onmicrosoft.com" -
 | iTunes | `Apple.iTunes` |
 | AIMP | `AIMP.AIMP` |
 | MPC-HC | `clsid2.mpc-hc` |
-| Kodi | `Kodi.Kodi` |
 
 #### Utilities (13 apps)
 
@@ -151,51 +146,44 @@ Invoke-PopularAppsDeployment -Category Media -Tenant "contoso.onmicrosoft.com" -
 | ShareX | `ShareX.ShareX` |
 | CCleaner | `Piriform.CCleaner` |
 | Sysinternals PsTools | `Microsoft.Sysinternals.PsTools` |
-| Process Explorer | `Sysinternals.ProcessExplorer` |
-| Autoruns | `Sysinternals.Autoruns` |
+| Process Explorer | `Microsoft.Sysinternals.ProcessExplorer` |
+| Autoruns | `Microsoft.Sysinternals.Autoruns` |
 | WinDirStat | `WinDirStat.WinDirStat` |
 | Rufus | `Rufus.Rufus` |
 | Balena Etcher | `Balena.Etcher` |
 
-#### Security (8 apps)
+#### Security (4 apps)
 
 | App Name | WinGet Package ID |
 |----------|-------------------|
 | KeePassXC | `KeePassXCTeam.KeePassXC` |
 | Bitwarden | `Bitwarden.Bitwarden` |
-| 1Password | `1Password.1Password` |
-| NordVPN | `NordVPN.NordVPN` |
-| Proton VPN | `ProtonTechnologies.ProtonVPN` |
 | Malwarebytes | `Malwarebytes.Malwarebytes` |
 | Gpg4win | `GnuPG.Gpg4win` |
-| VeraCrypt | `VeraCrypt.VeraCrypt` |
 
-#### Graphics (8 apps)
+#### Graphics (7 apps)
 
 | App Name | WinGet Package ID |
 |----------|-------------------|
-| GIMP | `GIMP.GIMP` |
+| GIMP | `GIMP.GIMP.2` |
 | Inkscape | `Inkscape.Inkscape` |
 | Paint.NET | `dotPDN.PaintDotNet` |
-| Blender | `Blender.Blender` |
 | IrfanView | `IrfanSkiljan.IrfanView` |
 | XnView MP | `XnSoft.XnViewMP` |
 | Figma | `Figma.Figma` |
 | Canva | `Canva.Canva` |
 
-#### Remote (7 apps)
+#### Remote (5 apps)
 
 | App Name | WinGet Package ID |
 |----------|-------------------|
 | TeamViewer | `TeamViewer.TeamViewer` |
-| AnyDesk | `AnyDeskSoftwareGmbH.AnyDesk` |
-| Chrome Remote Desktop | `Google.ChromeRemoteDesktop` |
+| Chrome Remote Desktop | `Google.ChromeRemoteDesktopHost` |
 | VNC Viewer | `RealVNC.VNCViewer` |
 | Microsoft Remote Desktop | `Microsoft.RemoteDesktopClient` |
 | Parsec | `Parsec.Parsec` |
-| TightVNC | `TightVNC.TightVNC` |
 
-**Total: 86 curated applications across 9 categories**
+**Total: 74 curated applications across 9 categories**
 
 ## What the Script Does
 
@@ -272,7 +260,6 @@ This standardized tagging enables:
 ## Notes & Caveats
 
 - **Windows-only**: This module requires Windows for WinGet packaging operations. The CI pipeline runs code quality checks cross-platform but build/test steps only on Windows.
-- `Out-GridView` is only used for interactive app selection when no `-appid` is supplied.
 - Winget downloads and installs dependencies; ensure network access to `aka.ms` and `github.com` endpoints.
 - Proactive Remediations creation requires an eligible license (Intune Plan 2/Intune Suite/Windows 365 Enterprise).
 

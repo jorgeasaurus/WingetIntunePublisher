@@ -56,17 +56,17 @@ function Deploy-WinGetApp {
     $installFilename = "install$safeAppId.ps1"
     $installScriptFile = Join-Path $appPath $installFilename
     New-WinGetScript -AppId $AppId -AppName $AppName -ScriptType "Install" | Out-File $installScriptFile -Encoding utf8
-    Write-Host "Created: $installScriptFile"
+    Write-Verbose "Created: $installScriptFile"
 
     $uninstallFilename = "uninstall$safeAppId.ps1"
     $uninstallScriptFile = Join-Path $appPath $uninstallFilename
     New-WinGetScript -AppId $AppId -AppName $AppName -ScriptType "Uninstall" | Out-File $uninstallScriptFile -Encoding utf8
-    Write-Host "Created: $uninstallScriptFile"
+    Write-Verbose "Created: $uninstallScriptFile"
 
     $detectionFilename = "detection$safeAppId.ps1"
     $detectionScriptFile = Join-Path $appPath $detectionFilename
     New-WinGetScript -AppId $AppId -AppName $AppName -ScriptType "DetectionRemediation" | Out-File $detectionScriptFile -Encoding utf8
-    Write-Host "Created: $detectionScriptFile"
+    Write-Verbose "Created: $detectionScriptFile"
 
     # 4. Create proactive remediation (if licensed)
     if (Test-ProactiveRemediationLicense) {
@@ -80,8 +80,8 @@ function Deploy-WinGetApp {
     # The IntuneWin file will be created without the .ps1 extension in the name
     $intunewinFilename = $installFilename -replace '\.ps1$', ''
     $intunewinPath = Join-Path $BasePath "$intunewinFilename.intunewin"
-    New-IntuneWinFile -appid $AppId -appname $AppName -apppath $appPath -setupfilename $installFilename -destpath $BasePath
-    Write-Host "Created: $intunewinPath"
+    New-IntuneWinFile -appid $AppId -appname $AppName -apppath $appPath -setupfilename $installFilename -destpath $BasePath *>&1 | Out-Null
+    Write-Verbose "Created: $intunewinPath"
 
     # Brief pause for file system
     Start-Sleep -Seconds 10

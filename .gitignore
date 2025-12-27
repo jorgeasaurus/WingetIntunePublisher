@@ -10,3 +10,6 @@ CLAUDE.md
 build
 TASKS.md
 test.ps1
+Dev/cache/
+Dev/Check-AppIcon.ps1
+CODE_REVIEW_REPORT.md
