@@ -7,4 +7,6 @@
 *.log
 CLAUDE.md
 .claude
-build\*
+build
+TASKS.md
+test.ps1

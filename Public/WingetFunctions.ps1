@@ -159,10 +159,15 @@ function Find-WinGetPackage {
         }
     }
     process {
-        $List = Invoke-WinGetCommand -WinGetArgs $WinGetArgs -IndexTitles $IndexTitles
+        $ErrorActionPreference = 'Continue'
+        $List = Invoke-WinGetCommand -WinGetArgs $WinGetArgs -IndexTitles $IndexTitles -ErrorAction SilentlyContinue 2>$null
 
-        foreach ($Obj in $List) {
-            $Result += [WinGetPackage]::New($Obj)
+        if ($List) {
+            foreach ($Obj in $List) {
+                $Result += [WinGetPackage]::New($Obj)
+            }
+        } else {
+            Write-Verbose "No packages found matching the search criteria"
         }
     }
     end {

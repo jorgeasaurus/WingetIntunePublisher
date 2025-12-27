@@ -110,9 +110,9 @@ Force deployment even if the app already exists in Intune.
         }
     } else {
         Write-Progress "Loading Winget Packages" -PercentComplete 1
-        $packs2 = Find-WinGetPackage '""'
+        $packs2 = Find-WinGetPackage '""' # This logic appears to not work, better to remove #TODO
         Write-Progress "Loading Winget Packages" -Completed
-        $packs = $packs2 | Out-ConsoleGridView -PassThru -Title "Available Applications"
+        $packs = $packs2 | Out-ConsoleGridView -Title "Available Applications" -OutputMode Multiple
     }
 
     foreach ($pack in $packs) {
