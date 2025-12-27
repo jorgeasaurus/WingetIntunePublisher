@@ -40,9 +40,7 @@ Invoke-WingetIntunePublisher -appid "Google.Chrome" -tenant $tenantId -clientid 
 
 ## Deploy Popular Apps by Category
 
-The module includes curated collections of 86 popular enterprise applications organized by category. You can deploy them using either `Invoke-PopularAppsDeployment` (recommended) or `Get-PopularAppsByCategory` with `Invoke-WingetIntunePublisher`.
-
-### Quick Usage (Recommended)
+The module includes curated collections of 86 popular enterprise applications organized by category.
 
 ```powershell
 # Deploy all browsers (8 apps)
@@ -62,19 +60,6 @@ Invoke-PopularAppsDeployment -Category Browsers -WhatIf
 
 # Deploy with app-based authentication
 Invoke-PopularAppsDeployment -Category Media -Tenant "contoso.onmicrosoft.com" -ClientId "app-guid" -ClientSecret "secret"
-```
-
-### Advanced Usage (Manual Control)
-
-```powershell
-# Get apps and deploy with custom parameters
-$browsers = Get-PopularAppsByCategory -Category Browsers -ReturnAsObject
-Invoke-WingetIntunePublisher -appid $browsers.AppId -appname $browsers.AppName
-
-# Deploy filtered subset of utilities
-$utils = Get-PopularAppsByCategory -Category Utilities -ReturnAsObject
-$essential = $utils | Where-Object { $_.AppName -in @('7-Zip', 'Everything Search') }
-Invoke-WingetIntunePublisher -appid $essential.AppId -appname $essential.AppName
 ```
 
 ### Available Categories
