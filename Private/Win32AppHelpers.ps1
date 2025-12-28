@@ -631,7 +631,11 @@ function Invoke-UploadWin32Lob {
         Write-Verbose "Creating application in Intune..."
         Write-IntuneLog "Creating application in Intune..."
 
-        $mobileApp = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceAppManagement/mobileApps/" -Body ($mobileAppBody | ConvertTo-Json) -ContentType "application/json" -OutputType PSObject
+        $mobileApp = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceAppManagement/mobileApps/" -Body ($mobileAppBody | ConvertTo-Json) -ContentType "application/json" -OutputType PSObject -ErrorAction Stop
+
+        if (-not $mobileApp -or -not $mobileApp.id) {
+            throw "Graph API returned null response or missing app ID"
+        }
 
         # Get the content version for the new app (this will always be 1 until the new app is committed).
         Write-Verbose "Creating Content Version in the service for the application..."
@@ -639,7 +643,7 @@ function Invoke-UploadWin32Lob {
 
         $appId = $mobileApp.id
         $contentVersionUri = "beta/deviceAppManagement/mobileApps/$appId/$LOBType/contentVersions"
-        $contentVersion = Invoke-MgGraphRequest -Method POST -Uri $contentVersionUri -Body "{}"
+        $contentVersion = Invoke-MgGraphRequest -Method POST -Uri $contentVersionUri -Body "{}" -ErrorAction Stop
 
         # Encrypt file and Get File Information
         Write-Verbose "Getting Encryption Information for '$SourceFile'..."
@@ -670,7 +674,7 @@ function Invoke-UploadWin32Lob {
         $contentVersionId = $contentVersion.id
         $fileBody = Get-AppFileBody "$FileName" $Size $EncrySize $null
         $filesUri = "beta/deviceAppManagement/mobileApps/$appId/$LOBType/contentVersions/$contentVersionId/files"
-        $file = Invoke-MgGraphRequest -Method POST -Uri $filesUri -Body ($fileBody | ConvertTo-Json)
+        $file = Invoke-MgGraphRequest -Method POST -Uri $filesUri -Body ($fileBody | ConvertTo-Json) -ErrorAction Stop
 
         # Wait for the service to process the new file request.
         Write-Verbose "Waiting for the file entry URI to be created..."
@@ -694,7 +698,7 @@ function Invoke-UploadWin32Lob {
         Write-IntuneLog "Committing the file into Azure Storage..."
 
         $commitFileUri = "beta/deviceAppManagement/mobileApps/$appId/$LOBType/contentVersions/$contentVersionId/files/$fileId/commit"
-        Invoke-MgGraphRequest -Uri $commitFileUri -Method POST -Body ($fileEncryptionInfo | ConvertTo-Json)
+        Invoke-MgGraphRequest -Uri $commitFileUri -Method POST -Body ($fileEncryptionInfo | ConvertTo-Json) -ErrorAction Stop
 
         # Wait for the service to process the commit file request.
         Write-Verbose "Waiting for the service to process the commit file request..."
@@ -708,7 +712,7 @@ function Invoke-UploadWin32Lob {
 
         $commitAppUri = "beta/deviceAppManagement/mobileApps/$appId"
         $commitAppBody = Get-AppCommitBody $contentVersionId $LOBType
-        Invoke-MgGraphRequest -Method PATCH -Uri $commitAppUri -Body ($commitAppBody | ConvertTo-Json)
+        Invoke-MgGraphRequest -Method PATCH -Uri $commitAppUri -Body ($commitAppBody | ConvertTo-Json) -ErrorAction Stop
 
         foreach ($i in 0..$sleep) {
             Write-Progress -Activity "Sleeping for $($sleep-$i) seconds" -PercentComplete ($i / $sleep * 100) -SecondsRemaining ($sleep - $i)
@@ -741,8 +745,8 @@ function Wait-AppPublishing {
     
     while (-not $isPublished -and $retryCount -lt $MaxRetries) {
         try {
-            $app = Invoke-MgGraphRequest -Uri "beta/deviceAppManagement/mobileApps/$AppId" -Method GET
-            
+            $app = Invoke-MgGraphRequest -Uri "beta/deviceAppManagement/mobileApps/$AppId" -Method GET -ErrorAction Stop
+
             if ($app.publishingState -eq "published") {
                 $isPublished = $true
                 Write-Host "App is now published" -ForegroundColor Green
@@ -852,7 +856,7 @@ function Grant-Win32AppAssignment {
     }
 
     $body = @{ mobileAppAssignments = $assignments }
-    Invoke-MgGraphRequest -Uri "beta/deviceAppManagement/mobileApps/$($Application.id)/assign" -Method POST -Body ($body | ConvertTo-Json -Depth 10)
+    Invoke-MgGraphRequest -Uri "beta/deviceAppManagement/mobileApps/$($Application.id)/assign" -Method POST -Body ($body | ConvertTo-Json -Depth 10) -ErrorAction Stop
 }
 
 function New-Win32App {

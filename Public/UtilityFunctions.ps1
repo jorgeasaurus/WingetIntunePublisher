@@ -6,8 +6,8 @@ function Write-IntuneLog {
     
     # Use global LogFile if available, otherwise create one
     if (-not $global:LogFile) {
-        $date = Get-Date -Format yyMMddmmss
-        $global:LogFile = "$env:TEMP\intune-$date.log"
+        $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+        $global:LogFile = Join-Path -Path $env:TEMP -ChildPath "intune-$timestamp.log"
     }
     
     $Stamp = (Get-Date).toString("yyyy/MM/dd HH:mm:ss")

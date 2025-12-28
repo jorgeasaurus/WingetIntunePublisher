@@ -111,7 +111,7 @@ function Update-AzureStorageUpload {
     
     $renewalUri = "$fileUri/renewUpload"
     $actionBody = ""
-    Invoke-MgGraphRequest -Method POST -Uri $renewalUri -Body $actionBody
+    Invoke-MgGraphRequest -Method POST -Uri $renewalUri -Body $actionBody -ErrorAction Stop
 
     Wait-FileProcessing $fileUri "AzureStorageUriRenewal" $azureStorageRenewSasUriBackOffTimeInSeconds
 }
@@ -131,7 +131,7 @@ function Wait-FileProcessing {
 
     $file = $null
     while ($attempts -gt 0) {
-        $file = Invoke-MgGraphRequest -Method GET -Uri $fileUri
+        $file = Invoke-MgGraphRequest -Method GET -Uri $fileUri -ErrorAction Stop
 
         if ($file.uploadState -eq $successState) {
             break

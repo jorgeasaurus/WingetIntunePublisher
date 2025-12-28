@@ -191,6 +191,10 @@ try {
 }
 '@
 
+    # Escape AppId and AppName for safe interpolation in generated scripts
+    $safeAppId = $AppId.Replace("'", "''").Replace('"', '""').Replace('`', '``')
+    $safeAppName = $AppName.Replace("'", "''").Replace('"', '""').Replace('`', '``')
+
     switch ($ScriptType) {
         "Detection" {
             # Detection script for Proactive Remediation - checks if update is available
@@ -200,10 +204,10 @@ try {
 $wingetBootstrap
 `$upgrades = & `$Winget upgrade --source winget --accept-source-agreements 2>&1
 if (`$upgrades -match "$escapedAppId") {
-    Write-Host "Upgrade available for $AppName"
+    Write-Host "Upgrade available for $safeAppName"
     exit 1
 } else {
-    Write-Host "$AppName is up to date"
+    Write-Host "$safeAppName is up to date"
     exit 0
 }
 "@
@@ -212,7 +216,7 @@ if (`$upgrades -match "$escapedAppId") {
             # Remediation script for Proactive Remediation - upgrades the app
             return @"
 $wingetBootstrap
-& `$Winget upgrade --id "$AppId" --source winget --silent --force --accept-package-agreements --accept-source-agreements
+& `$Winget upgrade --id "$safeAppId" --source winget --silent --force --accept-package-agreements --accept-source-agreements
 exit `$LASTEXITCODE
 "@
         }
@@ -222,22 +226,23 @@ exit `$LASTEXITCODE
             $escapedAppId = [regex]::Escape($AppId)
             return @"
 $wingetBootstrap
-`$installed = & `$Winget list --id "$AppId" --source winget --accept-source-agreements 2>&1
+`$installed = & `$Winget list --id "$safeAppId" --source winget --accept-source-agreements 2>&1
 if (`$installed -match "$escapedAppId") {
-    Write-Host "$AppName is installed"
+    Write-Host "$safeAppName is installed"
     exit 0
 } else {
-    Write-Host "$AppName is not installed"
+    Write-Host "$safeAppName is not installed"
     exit 1
 }
 "@
         }
         "Install" {
+            $safeLogName = $AppId -replace '[^a-zA-Z0-9]', '_'
             return @"
 # Install script using extracted winget.exe for reliable SYSTEM context
 `$LogPath = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs"
 if (-not (Test-Path `$LogPath)) { New-Item -Path `$LogPath -ItemType Directory -Force | Out-Null }
-`$LogFile = Join-Path `$LogPath "$($AppId -replace '[^a-zA-Z0-9]', '_')_Install.log"
+`$LogFile = Join-Path `$LogPath "${safeLogName}_Install.log"
 function Write-Log {
     param([string]`$Message)
     `$Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -245,7 +250,7 @@ function Write-Log {
     Write-Host `$Message
 }
 
-Write-Log "Starting installation of $AppName ($AppId)"
+Write-Log "Starting installation of $safeAppName ($safeAppId)"
 Write-Log "Running as: `$([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)"
 
 $wingetBootstrap
@@ -253,8 +258,8 @@ $wingetBootstrap
 Write-Log "WinGet executable: `$Winget"
 
 # Run the installation
-Write-Log "Installing $AppId..."
-`$output = & `$Winget install --id "$AppId" --source winget --silent --force --accept-package-agreements --accept-source-agreements --scope machine 2>&1
+Write-Log "Installing $safeAppId..."
+`$output = & `$Winget install --id "$safeAppId" --source winget --silent --force --accept-package-agreements --accept-source-agreements --scope machine 2>&1
 `$exitCode = `$LASTEXITCODE
 
 Write-Log "Output: `$output"
@@ -274,11 +279,12 @@ exit `$exitCode
 "@
         }
         "Uninstall" {
+            $safeLogName = $AppId -replace '[^a-zA-Z0-9]', '_'
             return @"
 # Uninstall script using extracted winget.exe for reliable SYSTEM context
 `$LogPath = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs"
 if (-not (Test-Path `$LogPath)) { New-Item -Path `$LogPath -ItemType Directory -Force | Out-Null }
-`$LogFile = Join-Path `$LogPath "$($AppId -replace '[^a-zA-Z0-9]', '_')_Uninstall.log"
+`$LogFile = Join-Path `$LogPath "${safeLogName}_Uninstall.log"
 function Write-Log {
     param([string]`$Message)
     `$Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -286,7 +292,7 @@ function Write-Log {
     Write-Host `$Message
 }
 
-Write-Log "Starting uninstallation of $AppName ($AppId)"
+Write-Log "Starting uninstallation of $safeAppName ($safeAppId)"
 Write-Log "Running as: `$([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)"
 
 $wingetBootstrap
@@ -294,8 +300,8 @@ $wingetBootstrap
 Write-Log "WinGet executable: `$Winget"
 
 # Run the uninstallation
-Write-Log "Uninstalling $AppId..."
-`$output = & `$Winget uninstall --id "$AppId" --source winget --silent --force --accept-source-agreements 2>&1
+Write-Log "Uninstalling $safeAppId..."
+`$output = & `$Winget uninstall --id "$safeAppId" --source winget --silent --force --accept-source-agreements 2>&1
 `$exitCode = `$LASTEXITCODE
 
 Write-Log "Output: `$output"
@@ -358,8 +364,8 @@ function New-ProactiveRemediation {
         remediationScriptParameters        = @()
     }
     
-    $result = Invoke-MgGraphRequest -Uri "beta/deviceManagement/deviceHealthScripts" -Method POST -Body ($body | ConvertTo-Json)
-    
+    $result = Invoke-MgGraphRequest -Uri "beta/deviceManagement/deviceHealthScripts" -Method POST -Body ($body | ConvertTo-Json) -ErrorAction Stop
+
     # Assign to group
     $assignBody = @{
         deviceHealthScriptAssignments = @(
@@ -379,9 +385,9 @@ function New-ProactiveRemediation {
             }
         )
     }
-    
+
     $assignUri = "beta/deviceManagement/deviceHealthScripts/$($result.id)/assign"
-    Invoke-MgGraphRequest -Uri $assignUri -Method POST -Body ($assignBody | ConvertTo-Json -Depth 10)
+    Invoke-MgGraphRequest -Uri $assignUri -Method POST -Body ($assignBody | ConvertTo-Json -Depth 10) -ErrorAction Stop
 
     Write-Verbose "Created proactive remediation: $($result.displayName) $($result.id)"
     Write-IntuneLog "Created proactive remediation: $($result.displayName) $($result.id)"

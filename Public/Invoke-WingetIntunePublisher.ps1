@@ -28,14 +28,38 @@ Force deployment even if the app already exists in Intune.
     param
     (
         [Parameter(Mandatory = $true)]
+        [ValidateScript({
+            foreach ($id in $_) {
+                if ([string]::IsNullOrWhiteSpace($id)) {
+                    throw "App ID cannot be empty or whitespace"
+                }
+                if ($id.Length -gt 255) {
+                    throw "App ID '$id' exceeds 255 characters"
+                }
+                if ($id -match '[<>:"|?*\\]') {
+                    throw "App ID '$id' contains invalid characters"
+                }
+            }
+            $true
+        })]
         [string[]]$appid,
+
+        [ValidateNotNullOrEmpty()]
         [string[]]$appname = @(),
+
+        [ValidatePattern('^[a-zA-Z0-9.-]+$')]
         [string]$tenant = "",
+
+        [ValidatePattern('^[a-fA-F0-9-]{36}$|^$')]
         [string]$clientid = "",
+
         [string]$clientsecret = "",
         [string]$installgroupname = "",
         [string]$uninstallgroupname = "",
-        [ValidateSet('User', 'Device', 'Both', 'None')] [string]$availableinstall = "User",
+
+        [ValidateSet('User', 'Device', 'Both', 'None')]
+        [string]$availableinstall = "User",
+
         [switch]$Force
     )
 
@@ -43,19 +67,20 @@ Force deployment even if the app already exists in Intune.
         $availableinstall = "None"
     }
 
-    $date = Get-Date -Format yyMMddmmss
-    $global:LogFile = "$env:TEMP\intune-$date.log"
-    $LogFile2 = "$env:TEMP\intuneauto-$date.log"
+    # Use proper timestamp format and unique session ID
+    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $sessionId = [guid]::NewGuid().ToString('N').Substring(0, 8)
+    $global:LogFile = Join-Path -Path $env:TEMP -ChildPath "intune-$timestamp.log"
+    $LogFile2 = Join-Path -Path $env:TEMP -ChildPath "intuneauto-$timestamp.log"
 
     try { Stop-Transcript -ErrorAction SilentlyContinue } catch {}
     Start-Transcript -Path $LogFile2
 
-    New-TempPath -Path "c:\temp" -Description "Base temp directory"
+    # Use system temp directory instead of hardcoded C:\temp
+    $baseTempPath = Join-Path -Path $env:TEMP -ChildPath "WingetIntunePublisher"
+    New-TempPath -Path $baseTempPath -Description "Base temp directory"
 
-    $random = Get-Random -Maximum 1000
-    $date = Get-Date -Format yyMMddmmss
-    $path = "c:\temp\$random-$date"
-
+    $path = Join-Path -Path $baseTempPath -ChildPath "$sessionId-$timestamp"
     New-TempPath -Path $path -Description "Session temp directory"
 
     @(
@@ -78,7 +103,9 @@ Force deployment even if the app already exists in Intune.
     Write-IntuneLog "Graph connection established"
 
     # Resolve names and correct casing for each appid
-    $packs = @()
+    # Use List<T> for better performance instead of array +=
+    $packs = [System.Collections.Generic.List[object]]::new()
+
     for ($i = 0; $i -lt $appid.Count; $i++) {
         $resolvedName = if ($appname.Count -gt $i -and $appname[$i]) {
             $appname[$i]
@@ -142,25 +169,71 @@ Force deployment even if the app already exists in Intune.
             $resolvedName = $correctedId
         }
 
-        $packs += [pscustomobject]@{
+        $packs.Add([pscustomobject]@{
             Id   = $correctedId.Trim()
             Name = $resolvedName.Trim()
+        })
+    }
+
+    # Deploy apps with error handling and result tracking
+    $deploymentResults = [System.Collections.Generic.List[object]]::new()
+
+    foreach ($pack in $packs) {
+        try {
+            Write-Host "`nDeploying: $($pack.Name) ($($pack.Id))" -ForegroundColor Cyan
+
+            Deploy-WinGetApp `
+                -AppId $pack.Id.Trim() `
+                -AppName $pack.Name.Trim() `
+                -BasePath $path `
+                -InstallGroupName $installgroupname `
+                -UninstallGroupName $uninstallgroupname `
+                -AvailableInstall $availableinstall `
+                -Force:$Force `
+                -ErrorAction Stop
+
+            $deploymentResults.Add([PSCustomObject]@{
+                AppId = $pack.Id
+                AppName = $pack.Name
+                Status = 'Success'
+                Error = $null
+            })
+
+            Write-Host "✓ Successfully deployed: $($pack.Name)" -ForegroundColor Green
+        }
+        catch {
+            $errorMessage = $_.Exception.Message
+            Write-Error "✗ Failed to deploy $($pack.Name): $errorMessage"
+            Write-IntuneLog "Deployment failed for $($pack.Name): $errorMessage"
+
+            $deploymentResults.Add([PSCustomObject]@{
+                AppId = $pack.Id
+                AppName = $pack.Name
+                Status = 'Failed'
+                Error = $errorMessage
+            })
         }
     }
 
-    foreach ($pack in $packs) {
-        Deploy-WinGetApp `
-            -AppId $pack.Id.Trim() `
-            -AppName $pack.Name.Trim() `
-            -BasePath $path `
-            -InstallGroupName $installgroupname `
-            -UninstallGroupName $uninstallgroupname `
-            -AvailableInstall $availableinstall `
-            -Force:$Force
+    # Display summary
+    Write-Host "`n========== Deployment Summary ==========" -ForegroundColor Cyan
+    $successCount = ($deploymentResults | Where-Object Status -eq 'Success').Count
+    $failedCount = ($deploymentResults | Where-Object Status -eq 'Failed').Count
+
+    Write-Host "Total apps: $($deploymentResults.Count)" -ForegroundColor White
+    Write-Host "Successful: $successCount" -ForegroundColor Green
+    Write-Host "Failed: $failedCount" -ForegroundColor $(if ($failedCount -gt 0) { 'Red' } else { 'Gray' })
+
+    if ($failedCount -gt 0) {
+        Write-Host "`nFailed deployments:" -ForegroundColor Red
+        $deploymentResults | Where-Object Status -eq 'Failed' | ForEach-Object {
+            Write-Host "  - $($_.AppName): $($_.Error)" -ForegroundColor Red
+        }
     }
 
     Disconnect-MgGraph | Out-Null
-    Write-Host "Selected apps have been deployed to Intune" -ForegroundColor Green
-
     Stop-Transcript
+
+    # Return results for pipeline processing
+    return $deploymentResults
 }

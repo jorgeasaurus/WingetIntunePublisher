@@ -77,7 +77,7 @@ Connect-ToGraph -TenantId $tenantID -AppId $app -AppSecret $secret
 function Invoke-GraphPaged {
     <#
     .SYNOPSIS
-    Performs paginated Graph API requests.
+    Performs paginated Graph API requests with efficient array handling.
     .PARAMETER Uri
     The Graph API URI to query.
     .PARAMETER Method
@@ -90,30 +90,65 @@ function Invoke-GraphPaged {
         [string]$Method = "GET"
     )
 
-    $results = @()
+    # Use List<T> instead of array += for better performance
+    $results = [System.Collections.Generic.List[object]]::new()
     $response = Invoke-MgGraphRequest -Uri $Uri -Method $Method -OutputType PSObject
 
     if ($response.value) {
-        $results += $response.value
+        $results.AddRange([array]$response.value)
     } else {
-        $results += $response
+        $results.Add($response)
     }
 
     while ($response.'@odata.nextLink') {
         $response = Invoke-MgGraphRequest -Uri $response.'@odata.nextLink' -Method $Method -OutputType PSObject
-        $results += $response.value
+        if ($response.value) {
+            $results.AddRange([array]$response.value)
+        }
     }
 
-    return $results
+    return $results.ToArray()
 }
 
 function Get-IntuneApplication {
     <#
     .SYNOPSIS
-    Gets all applications from the Intune Graph API.
+    Gets applications from the Intune Graph API with optional filtering.
+    .PARAMETER AppName
+    Filter by application display name (exact match).
+    .PARAMETER Filter
+    OData filter string for custom filtering.
+    .EXAMPLE
+    Get-IntuneApplication -AppName "Google Chrome"
+    Returns the specific app matching "Google Chrome"
+    .EXAMPLE
+    Get-IntuneApplication -Filter "startswith(displayName,'Microsoft')"
+    Returns all apps starting with "Microsoft"
     .EXAMPLE
     Get-IntuneApplication
     Returns all applications configured in Intune
     #>
-    return Invoke-GraphPaged -Uri "beta/deviceAppManagement/mobileApps/"
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$AppName,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Filter
+    )
+
+    if ($AppName) {
+        # Escape single quotes in the app name and build filter
+        $escapedName = $AppName.Replace("'", "''")
+        $filterString = "displayName eq '$escapedName'"
+        $uri = "beta/deviceAppManagement/mobileApps?`$filter=$([uri]::EscapeDataString($filterString))"
+    }
+    elseif ($Filter) {
+        $uri = "beta/deviceAppManagement/mobileApps?`$filter=$([uri]::EscapeDataString($Filter))"
+    }
+    else {
+        $uri = "beta/deviceAppManagement/mobileApps/"
+    }
+
+    return Invoke-GraphPaged -Uri $uri
 }

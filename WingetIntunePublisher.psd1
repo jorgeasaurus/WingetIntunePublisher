@@ -3,7 +3,7 @@
     RootModule        = 'WingetIntunePublisher.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.1.0'
+    ModuleVersion     = '0.2.0'
 
     # Supported PSEditions
     CompatiblePSEditions = @('Desktop', 'Core')
@@ -62,7 +62,7 @@
     PrivateData       = @{
         PSData = @{
             Tags        = @('Winget', 'Intune', 'Graph', 'Win32App', 'Automation')
-            ReleaseNotes = 'Initial module packaging.'
+            ReleaseNotes = 'Pre-release version - Enterprise security improvements including input validation, code injection prevention, secure credential handling, comprehensive error handling, and performance optimization.'
         }
     }
 }
