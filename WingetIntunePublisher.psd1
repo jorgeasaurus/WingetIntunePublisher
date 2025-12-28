@@ -35,7 +35,7 @@
     # Functions to export from this module
     FunctionsToExport = @(
         'Invoke-WingetIntunePublisher'
-        'Assert-ModuleInstalled'
+        'Install-RequiredModule'
         'Connect-ToGraph'
         'Deploy-WinGetApp'
         'Find-WinGetPackage'
@@ -43,11 +43,9 @@
         'Get-WinGetPackage'
         'Install-WingetIfNeeded'
         'Install-WinGetPackage'
-        'New-TempPath'
         'Remove-WingetIntuneApps'
         'Uninstall-WinGetPackage'
         'Update-WinGetPackage'
-        'Write-IntuneLog'
     )
 
     # Cmdlets to export from this module
@@ -57,7 +55,7 @@
     VariablesToExport = @()
 
     # Aliases to export from this module
-    AliasesToExport   = @()
+    AliasesToExport   = @('Assert-ModuleInstalled')
 
     PrivateData       = @{
         PSData = @{

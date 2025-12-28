@@ -23,17 +23,16 @@ Describe 'WingetIntunePublisher module' {
     It 'exports the expected public functions' {
         $expected = @(
             'Invoke-WingetIntunePublisher',
-            'Assert-ModuleInstalled',
+            'Install-RequiredModule',
             'Connect-ToGraph',
             'Deploy-WinGetApp',
             'Find-WinGetPackage',
             'Get-WinGetPackage',
             'Install-WingetIfNeeded',
             'Install-WinGetPackage',
-            'New-TempPath',
+            'Remove-WingetIntuneApps',
             'Uninstall-WinGetPackage',
-            'Update-WinGetPackage',
-            'Write-IntuneLog'
+            'Update-WinGetPackage'
         )
 
         $exported = (Get-Module WingetIntunePublisher).ExportedFunctions.Keys
@@ -42,14 +41,18 @@ Describe 'WingetIntunePublisher module' {
         }
     }
 
+    It 'exports the backwards compatibility alias' {
+        $aliases = (Get-Module WingetIntunePublisher).ExportedAliases.Keys
+        $aliases | Should -Contain 'Assert-ModuleInstalled'
+    }
+
     Context 'Invoke-WingetIntunePublisher' {
         InModuleScope WingetIntunePublisher {
             It 'calls Deploy-WinGetApp for provided app ids' {
                 Mock -CommandName Start-Transcript
                 Mock -CommandName Stop-Transcript
                 Mock -CommandName Install-WingetIfNeeded
-                Mock -CommandName Write-IntuneLog
-                Mock -CommandName New-TempPath { param($Path, $Description) $Path }
+                Mock -CommandName Install-RequiredModule
                 Mock -CommandName Connect-ToGraph
                 Mock -CommandName Disconnect-MgGraph
                 Mock -CommandName Deploy-WinGetApp

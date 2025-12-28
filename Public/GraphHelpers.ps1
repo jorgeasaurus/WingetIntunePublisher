@@ -46,11 +46,18 @@ Connect-ToGraph -TenantId $tenantID -AppId $app -AppSecret $secret
                     throw "Failed to establish Graph connection - no context returned"
                 }
                 Write-Host "Connected to Intune tenant $($context.TenantId)" -ForegroundColor Green
-                Write-IntuneLog "Connected to Intune tenant $($context.TenantId)"
+                Write-Verbose "Connected to Intune tenant $($context.TenantId)"
             } catch {
                 Write-Host "Failed to connect to Microsoft Graph: $_" -ForegroundColor Red
-                Write-IntuneLog "Failed to connect to Microsoft Graph: $_"
-                throw
+                Write-Verbose "Failed to connect to Microsoft Graph: $_"
+
+                $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                    $_.Exception,
+                    'GraphConnectionFailed',
+                    [System.Management.Automation.ErrorCategory]::AuthenticationError,
+                    $scopes
+                )
+                $PSCmdlet.ThrowTerminatingError($errorRecord)
             }
             return
         }
@@ -65,11 +72,18 @@ Connect-ToGraph -TenantId $tenantID -AppId $app -AppSecret $secret
                 throw "Failed to establish Graph connection - no context returned"
             }
             Write-Host "Connected to Intune tenant $($context.TenantId) using app-based authentication" -ForegroundColor Green
-            Write-IntuneLog "Connected to Intune tenant $($context.TenantId) using app-based authentication"
+            Write-Verbose "Connected to Intune tenant $($context.TenantId) using app-based authentication"
         } catch {
             Write-Host "Failed to connect to Microsoft Graph: $_" -ForegroundColor Red
-            Write-IntuneLog "Failed to connect to Microsoft Graph: $_"
-            throw
+            Write-Verbose "Failed to connect to Microsoft Graph: $_"
+
+            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
+                $_.Exception,
+                'GraphConnectionFailed',
+                [System.Management.Automation.ErrorCategory]::AuthenticationError,
+                $Tenant
+            )
+            $PSCmdlet.ThrowTerminatingError($errorRecord)
         }
     }
 }

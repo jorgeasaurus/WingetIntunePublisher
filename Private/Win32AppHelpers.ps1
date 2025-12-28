@@ -75,7 +75,7 @@ function Get-AppIcon {
     $nameCandidates = $nameCandidates | Where-Object { $_ } | Select-Object -Unique
 
     Write-Verbose "Searching for icon with candidates: $($nameCandidates -join ', ')"
-    Write-IntuneLog "Searching for icon for $AppId"
+    Write-Verbose "Searching for icon for $AppId"
 
     foreach ($repoPath in $script:IconRepoPaths) {
         foreach ($candidate in $nameCandidates) {
@@ -89,7 +89,7 @@ function Get-AppIcon {
                 $iconBase64 = [Convert]::ToBase64String($iconBytes)
 
                 Write-Host "Found icon for $AppId at: $candidate.png" -ForegroundColor Green
-                Write-IntuneLog "Found icon for $AppId`: $candidate.png"
+                Write-Verbose "Found icon for $AppId`: $candidate.png"
 
                 return @{
                     "@odata.type" = "#microsoft.graph.mimeContent"
@@ -105,7 +105,7 @@ function Get-AppIcon {
     }
 
     Write-Host "No icon found for $AppId in repository" -ForegroundColor Yellow
-    Write-IntuneLog "No icon found for $AppId"
+    Write-Verbose "No icon found for $AppId"
     return $null
 }
 
@@ -629,7 +629,7 @@ function Invoke-UploadWin32Lob {
         }
 
         Write-Verbose "Creating application in Intune..."
-        Write-IntuneLog "Creating application in Intune..."
+        Write-Verbose "Creating application in Intune..."
 
         $mobileApp = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceAppManagement/mobileApps/" -Body ($mobileAppBody | ConvertTo-Json) -ContentType "application/json" -OutputType PSObject -ErrorAction Stop
 
@@ -639,7 +639,7 @@ function Invoke-UploadWin32Lob {
 
         # Get the content version for the new app (this will always be 1 until the new app is committed).
         Write-Verbose "Creating Content Version in the service for the application..."
-        Write-IntuneLog "Creating Content Version in the service for the application..."
+        Write-Verbose "Creating Content Version in the service for the application..."
 
         $appId = $mobileApp.id
         $contentVersionUri = "beta/deviceAppManagement/mobileApps/$appId/$LOBType/contentVersions"
@@ -647,7 +647,7 @@ function Invoke-UploadWin32Lob {
 
         # Encrypt file and Get File Information
         Write-Verbose "Getting Encryption Information for '$SourceFile'..."
-        Write-IntuneLog "Getting Encryption Information for '$SourceFile'..."
+        Write-Verbose "Getting Encryption Information for '$SourceFile'..."
 
         $encryptionInfo = @{}
         $encryptionInfo.encryptionKey = $DetectionXML.ApplicationInfo.EncryptionInfo.EncryptionKey
@@ -669,7 +669,7 @@ function Invoke-UploadWin32Lob {
 
         # Create a new file for the app.
         Write-Verbose "Creating a new file entry in Azure for the upload..."
-        Write-IntuneLog "Creating a new file entry in Azure for the upload..."
+        Write-Verbose "Creating a new file entry in Azure for the upload..."
 
         $contentVersionId = $contentVersion.id
         $fileBody = Get-AppFileBody "$FileName" $Size $EncrySize $null
@@ -678,7 +678,7 @@ function Invoke-UploadWin32Lob {
 
         # Wait for the service to process the new file request.
         Write-Verbose "Waiting for the file entry URI to be created..."
-        Write-IntuneLog "Waiting for the file entry URI to be created..."
+        Write-Verbose "Waiting for the file entry URI to be created..."
 
         $fileId = $file.id
         $fileUri = "beta/deviceAppManagement/mobileApps/$appId/$LOBType/contentVersions/$contentVersionId/files/$fileId"
@@ -686,7 +686,7 @@ function Invoke-UploadWin32Lob {
 
         # Upload the content to Azure Storage.
         Write-Verbose "Uploading file to Azure Storage..."
-        Write-IntuneLog "Uploading file to Azure Storage..."
+        Write-Verbose "Uploading file to Azure Storage..."
 
         Invoke-AzureStorageUpload $file.azureStorageUri "$IntuneWinFile" $fileUri
 
@@ -695,20 +695,20 @@ function Invoke-UploadWin32Lob {
 
         # Commit the file.
         Write-Verbose "Committing the file into Azure Storage..."
-        Write-IntuneLog "Committing the file into Azure Storage..."
+        Write-Verbose "Committing the file into Azure Storage..."
 
         $commitFileUri = "beta/deviceAppManagement/mobileApps/$appId/$LOBType/contentVersions/$contentVersionId/files/$fileId/commit"
         Invoke-MgGraphRequest -Uri $commitFileUri -Method POST -Body ($fileEncryptionInfo | ConvertTo-Json) -ErrorAction Stop
 
         # Wait for the service to process the commit file request.
         Write-Verbose "Waiting for the service to process the commit file request..."
-        Write-IntuneLog "Waiting for the service to process the commit file request..."
+        Write-Verbose "Waiting for the service to process the commit file request..."
 
         $file = Wait-FileProcessing $fileUri "CommitFile"
 
         # Commit the app.
         Write-Verbose "Committing the file into Azure Storage..."
-        Write-IntuneLog "Committing the file into Azure Storage..."
+        Write-Verbose "Committing the file into Azure Storage..."
 
         $commitAppUri = "beta/deviceAppManagement/mobileApps/$appId"
         $commitAppBody = Get-AppCommitBody $contentVersionId $LOBType

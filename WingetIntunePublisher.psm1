@@ -27,7 +27,7 @@ if (Test-Path $publicPath) {
 $publicFunctions = @(
     'Invoke-WingetIntunePublisher'
     'Invoke-PopularAppsDeployment'
-    'Assert-ModuleInstalled'
+    'Install-RequiredModule'
     'Connect-ToGraph'
     'Deploy-WinGetApp'
     'Find-WinGetPackage'
@@ -35,11 +35,13 @@ $publicFunctions = @(
     'Get-WinGetPackage'
     'Install-WingetIfNeeded'
     'Install-WinGetPackage'
-    'New-TempPath'
     'Remove-WingetIntuneApps'
     'Uninstall-WinGetPackage'
     'Update-WinGetPackage'
-    'Write-IntuneLog'
 )
 
-Export-ModuleMember -Function $publicFunctions
+$publicAliases = @(
+    'Assert-ModuleInstalled'
+)
+
+Export-ModuleMember -Function $publicFunctions -Alias $publicAliases

@@ -78,10 +78,12 @@ Force deployment even if the app already exists in Intune.
 
     # Use system temp directory instead of hardcoded C:\temp
     $baseTempPath = Join-Path -Path $env:TEMP -ChildPath "WingetIntunePublisher"
-    New-TempPath -Path $baseTempPath -Description "Base temp directory"
+    New-Item -Path $baseTempPath -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+    Write-Verbose "Created base temp directory: $baseTempPath"
 
     $path = Join-Path -Path $baseTempPath -ChildPath "$sessionId-$timestamp"
-    New-TempPath -Path $path -Description "Session temp directory"
+    New-Item -Path $path -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+    Write-Verbose "Created session temp directory: $path"
 
     @(
         'Microsoft.Graph.Authentication'
@@ -92,15 +94,15 @@ Force deployment even if the app already exists in Intune.
 
     Install-WingetIfNeeded
 
-    Write-IntuneLog "Connecting to Microsoft Graph"
+    Write-Verbose "Connecting to Microsoft Graph"
 
     if ($clientid -and $clientsecret -and $tenant) {
         Connect-ToGraph -Tenant $tenant -AppId $clientid -AppSecret $clientsecret
-        Write-IntuneLog "Graph Connection Established"
+        Write-Verbose "Graph Connection Established"
     } else {
         Connect-ToGraph -Scopes "DeviceManagementApps.ReadWrite.All, DeviceManagementConfiguration.ReadWrite.All, Group.ReadWrite.All, GroupMember.ReadWrite.All, openid, profile, email, offline_access"
     }
-    Write-IntuneLog "Graph connection established"
+    Write-Verbose "Graph connection established"
 
     # Resolve names and correct casing for each appid
     # Use List<T> for better performance instead of array +=
@@ -204,7 +206,7 @@ Force deployment even if the app already exists in Intune.
         catch {
             $errorMessage = $_.Exception.Message
             Write-Error "✗ Failed to deploy $($pack.Name): $errorMessage"
-            Write-IntuneLog "Deployment failed for $($pack.Name): $errorMessage"
+            Write-Verbose "Deployment failed for $($pack.Name): $errorMessage"
 
             $deploymentResults.Add([PSCustomObject]@{
                 AppId = $pack.Id

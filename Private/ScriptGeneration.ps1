@@ -21,18 +21,18 @@ function Test-ProactiveRemediationLicense {
         # Try to query the deviceHealthScripts endpoint - this will fail if not licensed
         $response = Invoke-MgGraphRequest -Uri "beta/deviceManagement/deviceHealthScripts?`$top=1" -Method GET -ErrorAction Stop
         Write-Host "Proactive Remediation license check: PASSED" -ForegroundColor Green
-        Write-IntuneLog "Proactive Remediation license check passed"
+        Write-Verbose "Proactive Remediation license check passed"
         return $true
     }
     catch {
         $errorMessage = $_.Exception.Message
         if ($errorMessage -match "403" -or $errorMessage -match "Forbidden" -or $errorMessage -match "license" -or $errorMessage -match "not enabled") {
             Write-Host "Proactive Remediation license check: FAILED - Feature requires Intune Plan 2 or Windows 365 Enterprise license" -ForegroundColor Yellow
-            Write-IntuneLog "Proactive Remediation license check failed - requires Intune Plan 2 or Windows 365 Enterprise"
+            Write-Verbose "Proactive Remediation license check failed - requires Intune Plan 2 or Windows 365 Enterprise"
         }
         else {
             Write-Host "Proactive Remediation license check: FAILED - $errorMessage" -ForegroundColor Yellow
-            Write-IntuneLog "Proactive Remediation license check failed: $errorMessage"
+            Write-Verbose "Proactive Remediation license check failed: $errorMessage"
         }
         return $false
     }
@@ -390,7 +390,6 @@ function New-ProactiveRemediation {
     Invoke-MgGraphRequest -Uri $assignUri -Method POST -Body ($assignBody | ConvertTo-Json -Depth 10) -ErrorAction Stop
 
     Write-Verbose "Created proactive remediation: $($result.displayName) $($result.id)"
-    Write-IntuneLog "Created proactive remediation: $($result.displayName) $($result.id)"
 
     return $result.id
 }

@@ -18,10 +18,10 @@ function Install-WingetIfNeeded {
 
     if ($wingetInstalled) {
         Write-Host -Message "Winget already installed"
-        Write-IntuneLog -Message "Winget already installed"
+        Write-Verbose "Winget already installed"
     } else {
         Write-Host -Message "Installing winget dependencies"
-        Write-IntuneLog -Message "Installing winget dependencies"
+        Write-Verbose "Installing winget dependencies"
         Add-AppxPackage -Path 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx'
 
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -29,7 +29,7 @@ function Install-WingetIfNeeded {
         $latestRelease = $releases.assets | Where-Object { $_.browser_download_url.EndsWith('msixbundle') } | Select-Object -First 1
 
         Write-Host -Message "Installing winget from $($latestRelease.browser_download_url)"
-        Write-IntuneLog -Message "Installing winget from $($latestRelease.browser_download_url)"
+        Write-Verbose "Installing winget from $($latestRelease.browser_download_url)"
         Add-AppxPackage -Path $latestRelease.browser_download_url
     }
 

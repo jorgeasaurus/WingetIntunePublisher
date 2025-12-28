@@ -57,7 +57,7 @@ function Get-OrCreateAADGroup {
 
         if ($existing.id) {
             Write-Host "Found existing group: $GroupName" -ForegroundColor Green
-            Write-IntuneLog "Found existing group: $GroupName"
+            Write-Verbose "Found existing group: $GroupName"
             return $existing.id
         }
     }
@@ -88,13 +88,13 @@ function Get-OrCreateAADGroup {
 
             $grp = Invoke-MgGraphRequest -Method POST -Uri "beta/groups" -Body ($body | ConvertTo-Json) -OutputType PSObject -ErrorAction Stop
             Write-Host "Created group: $GroupName ($($grp.id))" -ForegroundColor Green
-            Write-IntuneLog "Created group: $GroupName ($($grp.id))"
+            Write-Verbose "Created group: $GroupName ($($grp.id))"
 
             return $grp.id
         }
         catch {
             Write-Error "Failed to create group '$GroupName': $_"
-            Write-IntuneLog "Failed to create group '$GroupName': $_"
+            Write-Verbose "Failed to create group '$GroupName': $_"
             throw
         }
     }

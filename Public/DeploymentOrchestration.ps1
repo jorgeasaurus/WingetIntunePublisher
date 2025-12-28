@@ -22,8 +22,8 @@ function Deploy-WinGetApp {
     )
 
     Write-Host "========== Deploying $AppName ($AppId) ==========" -ForegroundColor Cyan
-    Write-IntuneLog "Starting deployment for $AppName ($AppId)"
-    
+    Write-Verbose "Starting deployment for $AppName ($AppId)"
+
     # Check if app already exists
     $existingApp = Test-ExistingIntuneApp -AppName $AppName
     if ($existingApp.Exists) {
@@ -43,7 +43,9 @@ function Deploy-WinGetApp {
     }
 
     # 1. Create app directory
-    $appPath = New-TempPath -Path (Join-Path $BasePath $AppId) -Description "App directory for $AppName"
+    $appPath = Join-Path $BasePath $AppId
+    New-Item -Path $appPath -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
+    Write-Verbose "Created app directory: $appPath"
 
     # 2. Create/get groups
     $installGroupId = Get-OrCreateAADGroup -AppId $AppId -AppName $AppName -GroupType "Install" -GroupName $InstallGroupName
@@ -105,14 +107,14 @@ function Deploy-WinGetApp {
         }
         else {
             Write-Host "Failed to upload $AppName to Intune - no app returned" -ForegroundColor Red
-            Write-IntuneLog "Failed to upload $AppName - no app returned"
+            Write-Verbose "Failed to upload $AppName - no app returned"
         }
     }
     catch {
         Write-Host "Error uploading $AppName to Intune: $_" -ForegroundColor Red
-        Write-IntuneLog "Error uploading $AppName`: $_"
+        Write-Verbose "Error uploading $AppName`: $_"
     }
 
     Write-Host "========== Completed $AppName ==========" -ForegroundColor Green
-    Write-IntuneLog "Completed deployment for $AppName"
+    Write-Verbose "Completed deployment for $AppName"
 }
