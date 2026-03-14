@@ -48,7 +48,7 @@ function Remove-WingetIntuneApps {
     Write-Host "This will remove apps and their associated groups and remediations.`n" -ForegroundColor Yellow
 
     # Define the identifier for WingetIntunePublisher apps
-    $wingetPublisherTag = "Imported with Winget Intune Publisher - github.com/jorgeasaurus/WingetIntunePublisher"
+    $wingetPublisherTag = $script:PublisherTag
 
     # Fetch all Win32 apps
     Write-Host "Fetching Win32 apps from Intune..." -ForegroundColor Cyan

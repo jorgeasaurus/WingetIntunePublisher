@@ -35,6 +35,7 @@
     # Functions to export from this module
     FunctionsToExport = @(
         'Invoke-WingetIntunePublisher'
+        'Invoke-PopularAppsDeployment'
         'Install-RequiredModule'
         'Connect-ToGraph'
         'Deploy-WinGetApp'

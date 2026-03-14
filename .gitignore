@@ -14,3 +14,4 @@ Dev/cache/
 Dev/Check-AppIcon.ps1
 *.md
 README.md.backup
+.secrets

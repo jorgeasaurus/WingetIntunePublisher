@@ -263,12 +263,6 @@ function Install-WinGetPackage {
                 $WinGetInstallArgs += "--Manifest"
             }
             $WinGetInstallArgs += $Filter
-        }
-        if ($PSBoundParameters.ContainsKey('Filter')) {
-            if ($Local) {
-                $WinGetInstallArgs += "--Manifest"
-            }
-            $WinGetInstallArgs += $Filter
             $WinGetFindArgs.Add('Filter', $Filter)
         }
         if ($PSBoundParameters.ContainsKey('Name')) {
@@ -320,7 +314,6 @@ function Install-WinGetPackage {
         }
     }
     process {
-        ## Exact, ID and Source - Talk with Demitrius tomorrow to better understand this.
         if (!$Local) {
             $Result = Find-WinGetPackage @WinGetFindArgs
         }
@@ -350,50 +343,14 @@ class WinGetSource {
     [string] $Identifier
     [string] $Type
 
-    WinGetSource ()
-    {  }
-
-    WinGetSource ([string]$a, [string]$b, [string]$c, [string]$d, [string]$e) {
-        $this.Name = $a.TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Argument = $b.TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Data = $c.TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Identifier = $d.TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Type = $e.TrimEnd() | Assert-WhiteSpaceIsNull
-    }
+    WinGetSource () {}
 
     WinGetSource ([string[]]$a) {
-        $this.name = $a[0].TrimEnd() | Assert-WhiteSpaceIsNull
+        $this.Name = $a[0].TrimEnd() | Assert-WhiteSpaceIsNull
         $this.Argument = $a[1].TrimEnd() | Assert-WhiteSpaceIsNull
         $this.Data = $a[2].TrimEnd() | Assert-WhiteSpaceIsNull
         $this.Identifier = $a[3].TrimEnd() | Assert-WhiteSpaceIsNull
         $this.Type = $a[4].TrimEnd() | Assert-WhiteSpaceIsNull
-    }
-
-    WinGetSource ([WinGetSource]$a) {
-        $this.Name = $a.Name.TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Argument = $a.Argument.TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Data = $a.Data.TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Identifier = $a.Identifier.TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Type = $a.Type.TrimEnd() | Assert-WhiteSpaceIsNull
-
-    }
-
-    [WinGetSource[]] Add ([WinGetSource]$a) {
-        $FirstValue = [WinGetSource]::New($this)
-        $SecondValue = [WinGetSource]::New($a)
-
-        [WinGetSource[]] $Combined = @([WinGetSource]::New($FirstValue), [WinGetSource]::New($SecondValue))
-
-        return $Combined
-    }
-
-    [WinGetSource[]] Add ([String[]]$a) {
-        $FirstValue = [WinGetSource]::New($this)
-        $SecondValue = [WinGetSource]::New($a)
-
-        [WinGetSource[]] $Combined = @([WinGetSource]::New($FirstValue), [WinGetSource]::New($SecondValue))
-
-        return $Combined
     }
 }
 class WinGetPackage {
@@ -404,55 +361,12 @@ class WinGetPackage {
     [string]$Source
     [string]$Match
 
-    WinGetPackage ([string] $a, [string]$b, [string]$c, [string]$d, [string]$e) {
-        $this.Name = $a.TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Id = $b.TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Version = $c.TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Available = $d.TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Source = $e.TrimEnd() | Assert-WhiteSpaceIsNull
-    }
-
-    WinGetPackage ([WinGetPackage] $a) {
-        $this.Name = $a.Name | Assert-WhiteSpaceIsNull
-        $this.Id = $a.Id | Assert-WhiteSpaceIsNull
-        $this.Version = $a.Version | Assert-WhiteSpaceIsNull
-        $this.Available = $a.Available | Assert-WhiteSpaceIsNull
-        $this.Source = $a.Source | Assert-WhiteSpaceIsNull
-
-    }
     WinGetPackage ([psobject] $a) {
         $this.Name = $a.Name | Assert-WhiteSpaceIsNull
         $this.Id = $a.Id | Assert-WhiteSpaceIsNull
         $this.Version = $a.Version | Assert-WhiteSpaceIsNull
         $this.Available = $a.Available | Assert-WhiteSpaceIsNull
         $this.Source = $a.Source | Assert-WhiteSpaceIsNull
-    }
-
-    WinGetSource ([string[]]$a) {
-        $this.name = $a[0].TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Id = $a[1].TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Version = $a[2].TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Available = $a[3].TrimEnd() | Assert-WhiteSpaceIsNull
-        $this.Source = $a[4].TrimEnd() | Assert-WhiteSpaceIsNull
-    }
-
-
-    [WinGetPackage[]] Add ([WinGetPackage] $a) {
-        $FirstValue = [WinGetPackage]::New($this)
-        $SecondValue = [WinGetPackage]::New($a)
-
-        [WinGetPackage[]]$Result = @([WinGetPackage]::New($FirstValue), [WinGetPackage]::New($SecondValue))
-
-        return $Result
-    }
-
-    [WinGetPackage[]] Add ([String[]]$a) {
-        $FirstValue = [WinGetPackage]::New($this)
-        $SecondValue = [WinGetPackage]::New($a)
-
-        [WinGetPackage[]] $Combined = @([WinGetPackage]::New($FirstValue), [WinGetPackage]::New($SecondValue))
-
-        return $Combined
     }
 }
 function Invoke-WinGetCommand {
@@ -529,10 +443,14 @@ function Invoke-WinGetCommand {
                 [bool] $TestNotTitles = $WinGetSourceListRaw[0] -ne $row
                 [bool] $TestNotHyphenLine = $WinGetSourceListRaw[1] -ne $row -and !$Row.Contains("---")
                 [bool] $TestNotNoResults = $row -ne "No package found matching input criteria."
-            } catch { Wait-Debugger }
+            } catch {
+                Write-Verbose "Error parsing winget output row: $_"
+                $i++
+                continue
+            }
 
             if (!$TestNotNoResults) {
-                Write-LogEntry -LogEntry "No package found matching input criteria." -Severity 1
+                Write-Verbose "No package found matching input criteria."
             }
 
             ## If this is the first pass containing titles or the table line, skip.
@@ -666,7 +584,6 @@ function Uninstall-WinGetPackage {
         }
     }
     process {
-        ## Exact, ID and Source - Talk with tomorrow to better understand this.
         if (!$Local) {
             $Result = Find-WinGetPackage -Filter $Filter -Name $Name -Id $Id -Moniker $Moniker -Tag $Tag -Command $Command -Source $Source
         }
@@ -772,7 +689,7 @@ function Update-WinGetPackage {
         [Parameter()] [switch]  $AcceptSourceAgreements
     )
     begin {
-        [string[]] $WinGetArgs = "Install"
+        [string[]] $WinGetArgs = "Upgrade"
         if ($PSBoundParameters.ContainsKey('Filter')) {
             $WinGetArgs += $Filter
         }
@@ -820,14 +737,13 @@ function Update-WinGetPackage {
         }
     }
     process {
-        ## Exact, ID and Source - Talk with Demitrius tomorrow to better understand this.
         $Result = Find-WinGetPackage -Filter $Filter -Name $Name -Id $Id -Moniker $Moniker -Tag $Tag -Command $Command -Source $Source
 
         if ($Result.count -eq 1) {
             & "WinGet" $WingetArgs
             $Result = ""
         } elseif ($Result.count -lt 1) {
-            Write-Error -Message "Unable to locate package for installation"
+            Write-Error -Message "Unable to locate package for upgrade"
             $Result = ""
         } else {
             Write-Error -Message "Multiple packages found matching input criteria. Please refine the input."

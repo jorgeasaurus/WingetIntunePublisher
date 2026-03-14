@@ -41,24 +41,17 @@ Connect-ToGraph -TenantId $tenantID -AppId $app -AppSecret $secret
         if (-not $AppId) {
             try {
                 Connect-MgGraph -Scopes $scopes -NoWelcome -ErrorAction Stop
-                $context = Get-MgContext
-                if (-not $context) {
-                    throw "Failed to establish Graph connection - no context returned"
-                }
-                Write-Host "Connected to Intune tenant $($context.TenantId)" -ForegroundColor Green
-                Write-Verbose "Connected to Intune tenant $($context.TenantId)"
             } catch {
-                Write-Host "Failed to connect to Microsoft Graph: $_" -ForegroundColor Red
-                Write-Verbose "Failed to connect to Microsoft Graph: $_"
-
-                $errorRecord = [System.Management.Automation.ErrorRecord]::new(
-                    $_.Exception,
-                    'GraphConnectionFailed',
-                    [System.Management.Automation.ErrorCategory]::AuthenticationError,
-                    $scopes
+                $PSCmdlet.ThrowTerminatingError(
+                    [System.Management.Automation.ErrorRecord]::new(
+                        $_.Exception, 'GraphConnectionFailed',
+                        [System.Management.Automation.ErrorCategory]::AuthenticationError, $scopes
+                    )
                 )
-                $PSCmdlet.ThrowTerminatingError($errorRecord)
             }
+            $context = Get-MgContext
+            if (-not $context) { throw "Failed to establish Graph connection - no context returned" }
+            Write-Host "Connected to Intune tenant $($context.TenantId)" -ForegroundColor Green
             return
         }
 
@@ -67,24 +60,17 @@ Connect-ToGraph -TenantId $tenantID -AppId $app -AppSecret $secret
             $clientSecretSecure = ConvertTo-SecureString -String $AppSecret -AsPlainText -Force
             $credential = New-Object System.Management.Automation.PSCredential($AppId, $clientSecretSecure)
             Connect-MgGraph -TenantId $Tenant -ClientSecretCredential $credential -NoWelcome -ErrorAction Stop
-            $context = Get-MgContext
-            if (-not $context) {
-                throw "Failed to establish Graph connection - no context returned"
-            }
-            Write-Host "Connected to Intune tenant $($context.TenantId) using app-based authentication" -ForegroundColor Green
-            Write-Verbose "Connected to Intune tenant $($context.TenantId) using app-based authentication"
         } catch {
-            Write-Host "Failed to connect to Microsoft Graph: $_" -ForegroundColor Red
-            Write-Verbose "Failed to connect to Microsoft Graph: $_"
-
-            $errorRecord = [System.Management.Automation.ErrorRecord]::new(
-                $_.Exception,
-                'GraphConnectionFailed',
-                [System.Management.Automation.ErrorCategory]::AuthenticationError,
-                $Tenant
+            $PSCmdlet.ThrowTerminatingError(
+                [System.Management.Automation.ErrorRecord]::new(
+                    $_.Exception, 'GraphConnectionFailed',
+                    [System.Management.Automation.ErrorCategory]::AuthenticationError, $Tenant
+                )
             )
-            $PSCmdlet.ThrowTerminatingError($errorRecord)
         }
+        $context = Get-MgContext
+        if (-not $context) { throw "Failed to establish Graph connection - no context returned" }
+        Write-Host "Connected to Intune tenant $($context.TenantId) using app-based authentication" -ForegroundColor Green
     }
 }
 
@@ -152,17 +138,14 @@ function Get-IntuneApplication {
     )
 
     if ($AppName) {
-        # Escape single quotes in the app name and build filter
         $escapedName = $AppName.Replace("'", "''")
         $filterString = "displayName eq '$escapedName'"
-        $uri = "beta/deviceAppManagement/mobileApps?`$filter=$([uri]::EscapeDataString($filterString))"
-    }
-    elseif ($Filter) {
-        $uri = "beta/deviceAppManagement/mobileApps?`$filter=$([uri]::EscapeDataString($Filter))"
-    }
-    else {
-        $uri = "beta/deviceAppManagement/mobileApps/"
+        return Invoke-GraphPaged -Uri "beta/deviceAppManagement/mobileApps?`$filter=$([uri]::EscapeDataString($filterString))"
     }
 
-    return Invoke-GraphPaged -Uri $uri
+    if ($Filter) {
+        return Invoke-GraphPaged -Uri "beta/deviceAppManagement/mobileApps?`$filter=$([uri]::EscapeDataString($Filter))"
+    }
+
+    return Invoke-GraphPaged -Uri "beta/deviceAppManagement/mobileApps/"
 }

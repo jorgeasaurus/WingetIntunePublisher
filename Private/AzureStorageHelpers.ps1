@@ -126,8 +126,6 @@ function Wait-FileProcessing {
     $attempts = 600
     $successState = "$($stage)Success"
     $pendingState = "$($stage)Pending"
-    $failedState = "$($stage)Failed"
-    $timedOutState = "$($stage)TimedOut"
 
     $file = $null
     while ($attempts -gt 0) {

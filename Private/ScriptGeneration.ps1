@@ -347,7 +347,7 @@ function New-ProactiveRemediation {
     $detectionBase64 = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($detectionScript))
     $remediationBase64 = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($remediationScript))
 
-    $descriptionSuffix = "Imported with Winget Intune Publisher - github.com/jorgeasaurus/WingetIntunePublisher"
+    $descriptionSuffix = $script:PublisherTag
     $body = @{
         "@odata.type"                       = "#microsoft.graph.deviceHealthScript"
         publisher                           = "Winget"

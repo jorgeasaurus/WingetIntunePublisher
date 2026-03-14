@@ -23,10 +23,12 @@ Describe 'WingetIntunePublisher module' {
     It 'exports the expected public functions' {
         $expected = @(
             'Invoke-WingetIntunePublisher',
+            'Invoke-PopularAppsDeployment',
             'Install-RequiredModule',
             'Connect-ToGraph',
             'Deploy-WinGetApp',
             'Find-WinGetPackage',
+            'Get-PopularAppsByCategory',
             'Get-WinGetPackage',
             'Install-WingetIfNeeded',
             'Install-WinGetPackage',

@@ -180,16 +180,15 @@ function Get-PopularAppsByCategory {
         $result = $popularApps[$Category]
     }
 
-    # Convert to object array if requested
     if ($ReturnAsObject) {
-        $objectArray = @()
+        $objectList = [System.Collections.Generic.List[object]]::new()
         foreach ($app in $result.GetEnumerator()) {
-            $objectArray += [PSCustomObject]@{
-                AppId = $app.Key
+            $objectList.Add([PSCustomObject]@{
+                AppId   = $app.Key
                 AppName = $app.Value
-            }
+            })
         }
-        return $objectArray
+        return $objectList.ToArray()
     }
 
     return $result

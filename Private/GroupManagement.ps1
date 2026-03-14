@@ -70,11 +70,10 @@ function Get-OrCreateAADGroup {
     if ($PSCmdlet.ShouldProcess("Azure AD", "Create security group '$GroupName'")) {
         try {
             $nickname = ($AppId + $GroupType.ToLower()) -replace '[^a-z0-9]', ''
-            $descriptionSuffix = "Imported with Winget Intune Publisher - github.com/jorgeasaurus/WingetIntunePublisher"
             $description = if ($GroupType -eq "Install") {
-                "Install group for $AppName - $descriptionSuffix"
+                "Install group for $AppName - $script:PublisherTag"
             } else {
-                "Uninstall group for $AppName - $descriptionSuffix"
+                "Uninstall group for $AppName - $script:PublisherTag"
             }
 
             $body = @{

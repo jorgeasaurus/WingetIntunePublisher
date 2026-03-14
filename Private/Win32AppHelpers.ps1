@@ -2,7 +2,6 @@
 # Win32 App creation and management functions
 
 # Configuration variables
-$azureStorageUploadChunkSizeInMb = 6l
 $sleep = 30
 
 # Icon repository configuration - search both folders
@@ -381,44 +380,18 @@ function New-DetectionRule {
     return $DR
 }
 
-function Get-DefaultReturnCode {
-    @{"returnCode" = 0; "type" = "success" }, `
-    @{"returnCode" = 1707; "type" = "success" }, `
-    @{"returnCode" = 3010; "type" = "softReboot" }, `
-    @{"returnCode" = 1641; "type" = "hardReboot" }, `
-    @{"returnCode" = 1618; "type" = "retry" }
-}
-
-function New-ReturnCode {
-    param
-    (
-        [parameter(Mandatory = $true)]
-        [int]$returnCode,
-        [parameter(Mandatory = $true)]
-        [ValidateSet('success', 'softReboot', 'hardReboot', 'retry')]
-        $type
-    )
-
-    @{"returnCode" = $returnCode; "type" = "$type" }
-}
-
 function Get-DefaultReturnCodes {
     <#
     .SYNOPSIS
     Returns the default return codes for Win32 apps in Intune
-    .DESCRIPTION
-    Creates an array of default return code objects for standard Win32 app deployments
     #>
-    
-    $returnCodes = @(
-        New-ReturnCode -returnCode 0 -type "success"
-        New-ReturnCode -returnCode 1707 -type "success"
-        New-ReturnCode -returnCode 3010 -type "softReboot"
-        New-ReturnCode -returnCode 1641 -type "hardReboot"
-        New-ReturnCode -returnCode 1618 -type "retry"
+    @(
+        @{ returnCode = 0;    type = "success" }
+        @{ returnCode = 1707; type = "success" }
+        @{ returnCode = 3010; type = "softReboot" }
+        @{ returnCode = 1641; type = "hardReboot" }
+        @{ returnCode = 1618; type = "retry" }
     )
-    
-    return $returnCodes
 }
 
 function Get-IntuneWinXML {
@@ -450,9 +423,9 @@ function Get-IntuneWinXML {
 
     [xml]$IntuneWinXML = Get-Content "$Directory\$filename"
 
-    return $IntuneWinXML
-
     if ($removeitem -eq "true") { Remove-Item "$Directory\$filename" }
+
+    return $IntuneWinXML
 }
 
 function Get-IntuneWinFile {
@@ -484,8 +457,6 @@ function Get-IntuneWinFile {
     $zip.Dispose()
 
     return "$Directory\$folder\$filename"
-
-    if ($removeitem -eq "true") { Remove-Item "$Directory\$filename" }
 }
 
 function Invoke-UploadWin32Lob {
@@ -552,36 +523,20 @@ function Invoke-UploadWin32Lob {
         Test-SourceFile "$SourceFile"
 
         Write-Verbose "Creating JSON data to pass to the service..."
-
-        # Funciton to read Win32LOB file
         $DetectionXML = Get-IntuneWinXML "$SourceFile" -fileName "detection.xml"
 
-        # If displayName input don't use Name from detection.xml file
         if ($displayName) { $DisplayName = $displayName }
         else { $DisplayName = $DetectionXML.ApplicationInfo.Name }
 
         $FileName = $DetectionXML.ApplicationInfo.FileName
-
         $SetupFileName = $DetectionXML.ApplicationInfo.SetupFile
-
         $Ext = [System.IO.Path]::GetExtension($SetupFileName)
 
         if ((($Ext).contains("msi") -or ($Ext).contains("Msi")) -and (!$installCmdLine -or !$uninstallCmdLine)) {
-
-            # MSI
             $MsiExecutionContext = $DetectionXML.ApplicationInfo.MsiInfo.MsiExecutionContext
             $MsiPackageType = "DualPurpose"
             if ($MsiExecutionContext -eq "System") { $MsiPackageType = "PerMachine" }
             elseif ($MsiExecutionContext -eq "User") { $MsiPackageType = "PerUser" }
-
-            $MsiProductCode = $DetectionXML.ApplicationInfo.MsiInfo.MsiProductCode
-            $MsiProductVersion = $DetectionXML.ApplicationInfo.MsiInfo.MsiProductVersion
-            $MsiPublisher = $DetectionXML.ApplicationInfo.MsiInfo.MsiPublisher
-            $MsiRequiresReboot = $DetectionXML.ApplicationInfo.MsiInfo.MsiRequiresReboot
-            $MsiUpgradeCode = $DetectionXML.ApplicationInfo.MsiInfo.MsiUpgradeCode
-
-            if ($MsiRequiresReboot -eq "false") { $MsiRequiresReboot = $false }
-            elseif ($MsiRequiresReboot -eq "true") { $MsiRequiresReboot = $true }
 
             $mobileAppBody = Get-Win32AppBody `
                 -MSI `
@@ -591,15 +546,14 @@ function Invoke-UploadWin32Lob {
                 -filename $FileName `
                 -SetupFileName "$SetupFileName" `
                 -installExperience $installExperience `
-                -MsiPackageType $MsiPackageType `
-                -MsiProductCode $MsiProductCode `
+                -MsiPackageType $DetectionXML.ApplicationInfo.MsiInfo.MsiPackageType `
+                -MsiProductCode $DetectionXML.ApplicationInfo.MsiInfo.MsiProductCode `
                 -MsiProductName $displayName `
-                -MsiProductVersion $MsiProductVersion `
-                -MsiPublisher $MsiPublisher `
-                -MsiRequiresReboot $MsiRequiresReboot `
-                -MsiUpgradeCode $MsiUpgradeCode `
+                -MsiProductVersion $DetectionXML.ApplicationInfo.MsiInfo.MsiProductVersion `
+                -MsiPublisher $DetectionXML.ApplicationInfo.MsiInfo.MsiPublisher `
+                -MsiRequiresReboot ($DetectionXML.ApplicationInfo.MsiInfo.MsiRequiresReboot -eq "true") `
+                -MsiUpgradeCode $DetectionXML.ApplicationInfo.MsiInfo.MsiUpgradeCode `
                 -largeIcon $largeIcon
-
         }
         else {
             $mobileAppBody = Get-Win32AppBody -EXE -displayName "$DisplayName" -publisher "$publisher" `
@@ -609,107 +563,71 @@ function Invoke-UploadWin32Lob {
         }
 
         if ($DetectionRules.'@odata.type' -contains "#microsoft.graph.win32LobAppPowerShellScriptDetection" -and @($DetectionRules).'@odata.type'.Count -gt 1) {
-            Write-Warning "A Detection Rule can either be 'Manually configure detection rules' or 'Use a custom detection script'"
-            Write-Warning "It can't include both..."
-            break
-        }
-        else {
-            $mobileAppBody | Add-Member -MemberType NoteProperty -Name 'detectionRules' -Value $detectionRules
-        }
-
-        #ReturnCodes
-
-        if ($returnCodes) {
-            $mobileAppBody | Add-Member -MemberType NoteProperty -Name 'returnCodes' -Value @($returnCodes)
-        }
-        else {
-            Write-Warning "Intunewin file requires ReturnCodes to be specified"
-            Write-Warning "If you want to use the default ReturnCode run 'Get-DefaultReturnCodes'"
+            Write-Warning "Detection rules cannot mix script-based and manual rules"
             break
         }
 
-        Write-Verbose "Creating application in Intune..."
-        Write-Verbose "Creating application in Intune..."
+        $mobileAppBody | Add-Member -MemberType NoteProperty -Name 'detectionRules' -Value $detectionRules
 
+        if (-not $returnCodes) {
+            Write-Warning "ReturnCodes required. Use Get-DefaultReturnCodes for defaults."
+            break
+        }
+        $mobileAppBody | Add-Member -MemberType NoteProperty -Name 'returnCodes' -Value @($returnCodes)
+
+        Write-Verbose "Creating application in Intune..."
         $mobileApp = Invoke-MgGraphRequest -Method POST -Uri "beta/deviceAppManagement/mobileApps/" -Body ($mobileAppBody | ConvertTo-Json) -ContentType "application/json" -OutputType PSObject -ErrorAction Stop
 
         if (-not $mobileApp -or -not $mobileApp.id) {
             throw "Graph API returned null response or missing app ID"
         }
 
-        # Get the content version for the new app (this will always be 1 until the new app is committed).
-        Write-Verbose "Creating Content Version in the service for the application..."
-        Write-Verbose "Creating Content Version in the service for the application..."
-
+        Write-Verbose "Creating Content Version in the service..."
         $appId = $mobileApp.id
         $contentVersionUri = "beta/deviceAppManagement/mobileApps/$appId/$LOBType/contentVersions"
         $contentVersion = Invoke-MgGraphRequest -Method POST -Uri $contentVersionUri -Body "{}" -ErrorAction Stop
 
-        # Encrypt file and Get File Information
         Write-Verbose "Getting Encryption Information for '$SourceFile'..."
-        Write-Verbose "Getting Encryption Information for '$SourceFile'..."
+        $encInfo = $DetectionXML.ApplicationInfo.EncryptionInfo
+        $encryptionInfo = @{
+            encryptionKey        = $encInfo.EncryptionKey
+            macKey               = $encInfo.macKey
+            initializationVector = $encInfo.initializationVector
+            mac                  = $encInfo.mac
+            profileIdentifier    = "ProfileVersion1"
+            fileDigest           = $encInfo.fileDigest
+            fileDigestAlgorithm  = $encInfo.fileDigestAlgorithm
+        }
+        $fileEncryptionInfo = @{ fileEncryptionInfo = $encryptionInfo }
 
-        $encryptionInfo = @{}
-        $encryptionInfo.encryptionKey = $DetectionXML.ApplicationInfo.EncryptionInfo.EncryptionKey
-        $encryptionInfo.macKey = $DetectionXML.ApplicationInfo.EncryptionInfo.macKey
-        $encryptionInfo.initializationVector = $DetectionXML.ApplicationInfo.EncryptionInfo.initializationVector
-        $encryptionInfo.mac = $DetectionXML.ApplicationInfo.EncryptionInfo.mac
-        $encryptionInfo.profileIdentifier = "ProfileVersion1"
-        $encryptionInfo.fileDigest = $DetectionXML.ApplicationInfo.EncryptionInfo.fileDigest
-        $encryptionInfo.fileDigestAlgorithm = $DetectionXML.ApplicationInfo.EncryptionInfo.fileDigestAlgorithm
-
-        $fileEncryptionInfo = @{}
-        $fileEncryptionInfo.fileEncryptionInfo = $encryptionInfo
-
-        # Extracting encrypted file
         $IntuneWinFile = Get-IntuneWinFile "$SourceFile" -fileName "$filename"
-
         [int64]$Size = $DetectionXML.ApplicationInfo.UnencryptedContentSize
         $EncrySize = (Get-Item "$IntuneWinFile").Length
 
-        # Create a new file for the app.
-        Write-Verbose "Creating a new file entry in Azure for the upload..."
-        Write-Verbose "Creating a new file entry in Azure for the upload..."
-
+        Write-Verbose "Creating file entry in Azure for upload..."
         $contentVersionId = $contentVersion.id
         $fileBody = Get-AppFileBody "$FileName" $Size $EncrySize $null
         $filesUri = "beta/deviceAppManagement/mobileApps/$appId/$LOBType/contentVersions/$contentVersionId/files"
         $file = Invoke-MgGraphRequest -Method POST -Uri $filesUri -Body ($fileBody | ConvertTo-Json) -ErrorAction Stop
 
-        # Wait for the service to process the new file request.
-        Write-Verbose "Waiting for the file entry URI to be created..."
-        Write-Verbose "Waiting for the file entry URI to be created..."
-
+        Write-Verbose "Waiting for file entry URI..."
         $fileId = $file.id
         $fileUri = "beta/deviceAppManagement/mobileApps/$appId/$LOBType/contentVersions/$contentVersionId/files/$fileId"
         $file = Wait-FileProcessing $fileUri "AzureStorageUriRequest"
 
-        # Upload the content to Azure Storage.
         Write-Verbose "Uploading file to Azure Storage..."
-        Write-Verbose "Uploading file to Azure Storage..."
-
         Invoke-AzureStorageUpload $file.azureStorageUri "$IntuneWinFile" $fileUri
 
-        # Need to Add removal of IntuneWin file
         Remove-Item "$IntuneWinFile" -Force
 
-        # Commit the file.
-        Write-Verbose "Committing the file into Azure Storage..."
-        Write-Verbose "Committing the file into Azure Storage..."
-
+        Write-Verbose "Committing file..."
         $commitFileUri = "beta/deviceAppManagement/mobileApps/$appId/$LOBType/contentVersions/$contentVersionId/files/$fileId/commit"
         Invoke-MgGraphRequest -Uri $commitFileUri -Method POST -Body ($fileEncryptionInfo | ConvertTo-Json) -ErrorAction Stop
 
-        # Wait for the service to process the commit file request.
-        Write-Verbose "Waiting for the service to process the commit file request..."
-        Write-Verbose "Waiting for the service to process the commit file request..."
-
+        Write-Verbose "Waiting for commit processing..."
         $file = Wait-FileProcessing $fileUri "CommitFile"
 
-        # Commit the app.
-        Write-Verbose "Committing the file into Azure Storage..."
-        Write-Verbose "Committing the file into Azure Storage..."
-
+        Write-Verbose "Committing app version..."
         $commitAppUri = "beta/deviceAppManagement/mobileApps/$appId"
         $commitAppBody = Get-AppCommitBody $contentVersionId $LOBType
         Invoke-MgGraphRequest -Method PATCH -Uri $commitAppUri -Body ($commitAppBody | ConvertTo-Json) -ErrorAction Stop
@@ -884,7 +802,7 @@ function New-Win32App {
         SourceFile       = "$appfile"
         DisplayName      = "$appname"
         publisher        = "Winget"
-        description      = "$appname Imported with Winget Intune Publisher - github.com/jorgeasaurus/WingetIntunePublisher"
+        description      = "$appname $script:PublisherTag"
         detectionRules   = $DetectionRule
         returnCodes      = $ReturnCodes
         installCmdLine   = "$installcmd"

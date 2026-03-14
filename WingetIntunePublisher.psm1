@@ -6,6 +6,7 @@
 #>
 
 $script:ModuleRoot = Split-Path -Parent $PSCommandPath
+$script:PublisherTag = "Imported with Winget Intune Publisher - github.com/jorgeasaurus/WingetIntunePublisher"
 
 # Load private helpers first
 $privatePath = Join-Path -Path $script:ModuleRoot -ChildPath 'Private'

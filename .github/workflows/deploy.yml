@@ -1,0 +1,83 @@
+name: Deploy Apps to Intune
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_ids:
+        description: 'Comma-separated WinGet App IDs (e.g., 7zip.7zip,Notepad++.Notepad++)'
+        required: true
+        type: string
+      available_install:
+        description: 'Make app available to User, Device, Both, or None'
+        required: false
+        default: 'User'
+        type: choice
+        options:
+          - User
+          - Device
+          - Both
+          - None
+      force:
+        description: 'Force deployment even if app already exists'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Intune
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Required Modules
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Microsoft.Graph.Authentication -Force -Scope CurrentUser -AllowClobber
+          Install-Module -Name SvRooij.ContentPrep.Cmdlet -Force -Scope CurrentUser
+
+      - name: Deploy Applications
+        shell: pwsh
+        env:
+          TENANT_ID: ${{ secrets.TENANT_ID }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+        run: |
+          Import-Module ./WingetIntunePublisher.psd1 -Force
+
+          $appIds = '${{ github.event.inputs.app_ids }}' -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+
+          if (-not $appIds) {
+            throw "No app IDs provided"
+          }
+
+          Write-Host "Deploying $($appIds.Count) app(s): $($appIds -join ', ')" -ForegroundColor Cyan
+
+          $params = @{
+            appid            = $appIds
+            tenant           = $env:TENANT_ID
+            clientid         = $env:CLIENT_ID
+            clientsecret     = $env:CLIENT_SECRET
+            availableinstall = '${{ github.event.inputs.available_install }}'
+          }
+
+          if ('${{ github.event.inputs.force }}' -eq 'true') {
+            $params['Force'] = $true
+          }
+
+          $results = Invoke-WingetIntunePublisher @params
+
+          $failed = $results | Where-Object Status -eq 'Failed'
+          if ($failed) {
+            Write-Host "`nFailed deployments:" -ForegroundColor Red
+            $failed | ForEach-Object { Write-Host "  - $($_.AppName): $($_.Error)" -ForegroundColor Red }
+            throw "$($failed.Count) app(s) failed to deploy"
+          }
+
+          Write-Host "`nAll $($results.Count) app(s) deployed successfully!" -ForegroundColor Green
