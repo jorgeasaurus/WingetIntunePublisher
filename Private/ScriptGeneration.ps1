@@ -387,7 +387,7 @@ function New-ProactiveRemediation {
     }
 
     $assignUri = "beta/deviceManagement/deviceHealthScripts/$($result.id)/assign"
-    Invoke-MgGraphRequest -Uri $assignUri -Method POST -Body ($assignBody | ConvertTo-Json -Depth 10) -ErrorAction Stop
+    Invoke-MgGraphRequest -Uri $assignUri -Method POST -Body ($assignBody | ConvertTo-Json -Depth 10) -ErrorAction Stop | Out-Null
 
     Write-Verbose "Created proactive remediation: $($result.displayName) $($result.id)"
 

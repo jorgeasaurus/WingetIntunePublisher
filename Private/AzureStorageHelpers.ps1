@@ -111,7 +111,7 @@ function Update-AzureStorageUpload {
     
     $renewalUri = "$fileUri/renewUpload"
     $actionBody = ""
-    Invoke-MgGraphRequest -Method POST -Uri $renewalUri -Body $actionBody -ErrorAction Stop
+    Invoke-MgGraphRequest -Method POST -Uri $renewalUri -Body $actionBody -ErrorAction Stop | Out-Null
 
     Wait-FileProcessing $fileUri "AzureStorageUriRenewal" $azureStorageRenewSasUriBackOffTimeInSeconds
 }

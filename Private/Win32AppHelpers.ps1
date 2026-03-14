@@ -451,7 +451,7 @@ function Invoke-UploadWin32Lob {
 
         Write-Verbose "Committing file..."
         $commitFileUri = "beta/deviceAppManagement/mobileApps/$appId/$LOBType/contentVersions/$contentVersionId/files/$fileId/commit"
-        Invoke-MgGraphRequest -Uri $commitFileUri -Method POST -Body ($fileEncryptionInfo | ConvertTo-Json) -ErrorAction Stop
+        Invoke-MgGraphRequest -Uri $commitFileUri -Method POST -Body ($fileEncryptionInfo | ConvertTo-Json) -ErrorAction Stop | Out-Null
 
         Write-Verbose "Waiting for commit processing..."
         $file = Wait-FileProcessing $fileUri "CommitFile"
@@ -459,7 +459,7 @@ function Invoke-UploadWin32Lob {
         Write-Verbose "Committing app version..."
         $commitAppUri = "beta/deviceAppManagement/mobileApps/$appId"
         $commitAppBody = Get-AppCommitBody $contentVersionId $LOBType
-        Invoke-MgGraphRequest -Method PATCH -Uri $commitAppUri -Body ($commitAppBody | ConvertTo-Json) -ErrorAction Stop
+        Invoke-MgGraphRequest -Method PATCH -Uri $commitAppUri -Body ($commitAppBody | ConvertTo-Json) -ErrorAction Stop | Out-Null
 
         foreach ($i in 0..$sleep) {
             Write-Progress -Activity "Sleeping for $($sleep-$i) seconds" -PercentComplete ($i / $sleep * 100) -SecondsRemaining ($sleep - $i)
@@ -601,7 +601,7 @@ function Grant-Win32AppAssignment {
     }
 
     $body = @{ mobileAppAssignments = $assignments }
-    Invoke-MgGraphRequest -Uri "beta/deviceAppManagement/mobileApps/$($Application.id)/assign" -Method POST -Body ($body | ConvertTo-Json -Depth 10) -ErrorAction Stop
+    Invoke-MgGraphRequest -Uri "beta/deviceAppManagement/mobileApps/$($Application.id)/assign" -Method POST -Body ($body | ConvertTo-Json -Depth 10) -ErrorAction Stop | Out-Null
 }
 
 function New-Win32App {
