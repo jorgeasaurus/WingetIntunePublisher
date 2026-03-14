@@ -17,10 +17,10 @@ function Install-WingetIfNeeded {
     $wingetInstalled = $hasPackageManager -and [version]$hasPackageManager.Version -ge $MinVersion
 
     if ($wingetInstalled) {
-        Write-Host -Message "Winget already installed"
+        Write-Host "Winget already installed"
         Write-Verbose "Winget already installed"
     } else {
-        Write-Host -Message "Installing winget dependencies"
+        Write-Host "Installing winget dependencies"
         Write-Verbose "Installing winget dependencies"
         Add-AppxPackage -Path 'https://aka.ms/Microsoft.VCLibs.x64.14.00.Desktop.appx'
 
@@ -28,19 +28,19 @@ function Install-WingetIfNeeded {
         $releases = Invoke-RestMethod -Uri 'https://api.github.com/repos/microsoft/winget-cli/releases/latest'
         $latestRelease = $releases.assets | Where-Object { $_.browser_download_url.EndsWith('msixbundle') } | Select-Object -First 1
 
-        Write-Host -Message "Installing winget from $($latestRelease.browser_download_url)"
+        Write-Host "Installing winget from $($latestRelease.browser_download_url)"
         Write-Verbose "Installing winget from $($latestRelease.browser_download_url)"
         Add-AppxPackage -Path $latestRelease.browser_download_url
     }
 
     # Accept source agreements proactively to avoid prompts
-    Write-Host -Message "Accepting winget source agreements..."
+    Write-Host "Accepting winget source agreements..."
     try {
         & winget source update --accept-source-agreements 2>$null | Out-Null
-        Write-Host -Message "Source agreements accepted"
+        Write-Host "Source agreements accepted"
     }
     catch {
-        Write-Host -Message "Could not pre-accept source agreements. They will be accepted per command."
+        Write-Host "Could not pre-accept source agreements. They will be accepted per command."
     }
 }
 
@@ -585,7 +585,7 @@ function Uninstall-WinGetPackage {
     }
     process {
         if (!$Local) {
-            $Result = Find-WinGetPackage -Filter $Filter -Name $Name -Id $Id -Moniker $Moniker -Tag $Tag -Command $Command -Source $Source
+            $Result = Find-WinGetPackage -Filter $Filter -Name $Name -Id $Id -Moniker $Moniker -Source $Source
         }
 
         if ($Result.count -eq 1 -or $Local) {
@@ -737,7 +737,7 @@ function Update-WinGetPackage {
         }
     }
     process {
-        $Result = Find-WinGetPackage -Filter $Filter -Name $Name -Id $Id -Moniker $Moniker -Tag $Tag -Command $Command -Source $Source
+        $Result = Find-WinGetPackage -Filter $Filter -Name $Name -Id $Id -Moniker $Moniker -Source $Source
 
         if ($Result.count -eq 1) {
             & "WinGet" $WingetArgs

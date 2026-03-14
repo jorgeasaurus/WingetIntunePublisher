@@ -81,6 +81,7 @@ task Test {
 
     $pesterConfig = New-PesterConfiguration
     $pesterConfig.Run.Path = Join-Path -Path $SourcePath -ChildPath 'Tests'
+    $pesterConfig.Run.PassThru = $true
     $pesterConfig.Run.Exit = $false
     $pesterConfig.Output.Verbosity = 'Detailed'
 

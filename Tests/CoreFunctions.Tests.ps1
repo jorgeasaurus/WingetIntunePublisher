@@ -1,23 +1,23 @@
-BeforeAll {
-    $moduleNames = @(
-        'Microsoft.Graph.Authentication',
-        'SvRooij.ContentPrep.Cmdlet'
-    )
+# Module stubs and import must be at script level (not in BeforeAll)
+# because InModuleScope runs during Pester 5 discovery phase
+$moduleNames = @(
+    'Microsoft.Graph.Authentication',
+    'SvRooij.ContentPrep.Cmdlet'
+)
 
-    foreach ($name in $moduleNames) {
-        if (-not (Get-Module -ListAvailable -Name $name)) {
-            New-Module -Name $name -ScriptBlock {
-                function Connect-MgGraph {}
-                function Get-MgContext {}
-                function Invoke-MgGraphRequest {}
-                function Disconnect-MgGraph {}
-            } | Import-Module -Force
-        }
+foreach ($name in $moduleNames) {
+    if (-not (Get-Module -ListAvailable -Name $name)) {
+        New-Module -Name $name -ScriptBlock {
+            function Connect-MgGraph {}
+            function Get-MgContext {}
+            function Invoke-MgGraphRequest {}
+            function Disconnect-MgGraph {}
+        } | Import-Module -Force
     }
-
-    $ModulePath = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'WingetIntunePublisher.psd1'
-    Import-Module $ModulePath -Force -ErrorAction Stop
 }
+
+$ModulePath = Join-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -ChildPath 'WingetIntunePublisher.psd1'
+Import-Module $ModulePath -Force -ErrorAction Stop
 
 Describe 'Get-PopularAppsByCategory' {
     It 'returns a hashtable for a specific category' {
@@ -92,8 +92,8 @@ Describe 'Get-IntuneApplication' {
 
             Get-IntuneApplication -AppName "Test's App"
 
-            Assert-MockCalled Invoke-GraphPaged -ParameterFilter {
-                $Uri -match "Test''s"
+            Should -Invoke Invoke-GraphPaged -ParameterFilter {
+                $Uri -match "Test%27%27s"
             } -Times 1
         }
 
@@ -102,7 +102,7 @@ Describe 'Get-IntuneApplication' {
 
             Get-IntuneApplication -Filter "startswith(displayName,'Test')"
 
-            Assert-MockCalled Invoke-GraphPaged -ParameterFilter {
+            Should -Invoke Invoke-GraphPaged -ParameterFilter {
                 $Uri -match 'filter='
             } -Times 1
         }
@@ -112,7 +112,7 @@ Describe 'Get-IntuneApplication' {
 
             Get-IntuneApplication
 
-            Assert-MockCalled Invoke-GraphPaged -ParameterFilter {
+            Should -Invoke Invoke-GraphPaged -ParameterFilter {
                 $Uri -eq 'beta/deviceAppManagement/mobileApps/'
             } -Times 1
         }

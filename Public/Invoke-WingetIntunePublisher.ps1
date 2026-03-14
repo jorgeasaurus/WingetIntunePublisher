@@ -67,17 +67,18 @@ Force deployment even if the app already exists in Intune.
         $availableinstall = "None"
     }
 
-    # Use proper timestamp format and unique session ID
+    # Use cross-platform temp path
+    $tempDir = [System.IO.Path]::GetTempPath()
     $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
     $sessionId = [guid]::NewGuid().ToString('N').Substring(0, 8)
-    $global:LogFile = Join-Path -Path $env:TEMP -ChildPath "intune-$timestamp.log"
-    $LogFile2 = Join-Path -Path $env:TEMP -ChildPath "intuneauto-$timestamp.log"
+    $global:LogFile = Join-Path -Path $tempDir -ChildPath "intune-$timestamp.log"
+    $LogFile2 = Join-Path -Path $tempDir -ChildPath "intuneauto-$timestamp.log"
 
-    try { Stop-Transcript -ErrorAction SilentlyContinue } catch {}
-    Start-Transcript -Path $LogFile2
+    try { Stop-Transcript -ErrorAction SilentlyContinue | Out-Null } catch {}
+    Start-Transcript -Path $LogFile2 | Out-Null
 
     # Use system temp directory instead of hardcoded C:\temp
-    $baseTempPath = Join-Path -Path $env:TEMP -ChildPath "WingetIntunePublisher"
+    $baseTempPath = Join-Path -Path $tempDir -ChildPath "WingetIntunePublisher"
     New-Item -Path $baseTempPath -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
     Write-Verbose "Created base temp directory: $baseTempPath"
 
@@ -234,7 +235,7 @@ Force deployment even if the app already exists in Intune.
     }
 
     Disconnect-MgGraph | Out-Null
-    Stop-Transcript
+    Stop-Transcript | Out-Null
 
     # Return results for pipeline processing
     return $deploymentResults

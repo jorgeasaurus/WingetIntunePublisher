@@ -40,7 +40,7 @@ Connect-ToGraph -TenantId $tenantID -AppId $app -AppSecret $secret
         # Guard: use interactive auth if no AppId provided
         if (-not $AppId) {
             try {
-                Connect-MgGraph -Scopes $scopes -NoWelcome -ErrorAction Stop
+                Connect-MgGraph -Scopes $scopes -NoWelcome -ErrorAction Stop | Out-Null
             } catch {
                 $PSCmdlet.ThrowTerminatingError(
                     [System.Management.Automation.ErrorRecord]::new(
@@ -59,7 +59,7 @@ Connect-ToGraph -TenantId $tenantID -AppId $app -AppSecret $secret
         try {
             $clientSecretSecure = ConvertTo-SecureString -String $AppSecret -AsPlainText -Force
             $credential = New-Object System.Management.Automation.PSCredential($AppId, $clientSecretSecure)
-            Connect-MgGraph -TenantId $Tenant -ClientSecretCredential $credential -NoWelcome -ErrorAction Stop
+            Connect-MgGraph -TenantId $Tenant -ClientSecretCredential $credential -NoWelcome -ErrorAction Stop | Out-Null
         } catch {
             $PSCmdlet.ThrowTerminatingError(
                 [System.Management.Automation.ErrorRecord]::new(

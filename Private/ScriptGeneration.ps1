@@ -195,6 +195,16 @@ try {
     $safeAppId = $AppId.Replace("'", "''").Replace('"', '""').Replace('`', '``')
     $safeAppName = $AppName.Replace("'", "''").Replace('"', '""').Replace('`', '``')
 
+    # Shared logging function for Install/Uninstall scripts
+    $writeLogFunction = @'
+function Write-Log {
+    param([string]$Message)
+    $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$Timestamp - $Message" | Out-File -FilePath $LogFile -Append -Encoding utf8
+    Write-Host $Message
+}
+'@
+
     switch ($ScriptType) {
         "Detection" {
             # Detection script for Proactive Remediation - checks if update is available
@@ -243,12 +253,7 @@ if (`$installed -match "$escapedAppId") {
 `$LogPath = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs"
 if (-not (Test-Path `$LogPath)) { New-Item -Path `$LogPath -ItemType Directory -Force | Out-Null }
 `$LogFile = Join-Path `$LogPath "${safeLogName}_Install.log"
-function Write-Log {
-    param([string]`$Message)
-    `$Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "`$Timestamp - `$Message" | Out-File -FilePath `$LogFile -Append -Encoding utf8
-    Write-Host `$Message
-}
+$writeLogFunction
 
 Write-Log "Starting installation of $safeAppName ($safeAppId)"
 Write-Log "Running as: `$([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)"
@@ -285,12 +290,7 @@ exit `$exitCode
 `$LogPath = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs"
 if (-not (Test-Path `$LogPath)) { New-Item -Path `$LogPath -ItemType Directory -Force | Out-Null }
 `$LogFile = Join-Path `$LogPath "${safeLogName}_Uninstall.log"
-function Write-Log {
-    param([string]`$Message)
-    `$Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    "`$Timestamp - `$Message" | Out-File -FilePath `$LogFile -Append -Encoding utf8
-    Write-Host `$Message
-}
+$writeLogFunction
 
 Write-Log "Starting uninstallation of $safeAppName ($safeAppId)"
 Write-Log "Running as: `$([System.Security.Principal.WindowsIdentity]::GetCurrent().Name)"

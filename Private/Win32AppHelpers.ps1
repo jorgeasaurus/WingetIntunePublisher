@@ -111,12 +111,6 @@ function Get-AppIcon {
 function Get-Win32AppBody {
     param
     (
-        [parameter(Mandatory = $true, ParameterSetName = "MSI", Position = 1)]
-        [Switch]$MSI,
-
-        [parameter(Mandatory = $true, ParameterSetName = "EXE", Position = 1)]
-        [Switch]$EXE,
-
         [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [string]$displayName,
@@ -141,95 +135,39 @@ function Get-Win32AppBody {
         [ValidateSet('system', 'user')]
         $installExperience,
 
-        [parameter(Mandatory = $true, ParameterSetName = "EXE")]
+        [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         $installCommandLine,
 
-        [parameter(Mandatory = $true, ParameterSetName = "EXE")]
+        [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         $uninstallCommandLine,
 
         [parameter(Mandatory = $false)]
-        [hashtable]$largeIcon,
-
-        [parameter(Mandatory = $true, ParameterSetName = "MSI")]
-        [ValidateNotNullOrEmpty()]
-        $MsiPackageType,
-
-        [parameter(Mandatory = $true, ParameterSetName = "MSI")]
-        [ValidateNotNullOrEmpty()]
-        $MsiProductCode,
-
-        [parameter(Mandatory = $false, ParameterSetName = "MSI")]
-        $MsiProductName,
-
-        [parameter(Mandatory = $true, ParameterSetName = "MSI")]
-        [ValidateNotNullOrEmpty()]
-        $MsiProductVersion,
-
-        [parameter(Mandatory = $false, ParameterSetName = "MSI")]
-        $MsiPublisher,
-
-        [parameter(Mandatory = $true, ParameterSetName = "MSI")]
-        [ValidateNotNullOrEmpty()]
-        $MsiRequiresReboot,
-
-        [parameter(Mandatory = $true, ParameterSetName = "MSI")]
-        [ValidateNotNullOrEmpty()]
-        $MsiUpgradeCode
+        [hashtable]$largeIcon
     )
 
-    if ($MSI) {
-        $body = @{ "@odata.type" = "#microsoft.graph.win32LobApp" }
-        $body.applicableArchitectures = "x64,x86"
-        $body.description = $description
-        $body.developer = ""
-        $body.displayName = $displayName
-        $body.fileName = $filename
-        $body.installCommandLine = "msiexec /i `"$SetupFileName`""
-        $body.installExperience = @{"runAsAccount" = "$installExperience" }
-        $body.informationUrl = $null
-        $body.isFeatured = $false
-        $body.minimumSupportedOperatingSystem = @{"v10_1607" = $true }
-        $body.msiInformation = @{
-            "packageType"    = "$MsiPackageType"
-            "productCode"    = "$MsiProductCode"
-            "productName"    = "$MsiProductName"
-            "productVersion" = "$MsiProductVersion"
-            "publisher"      = "$MsiPublisher"
-            "requiresReboot" = "$MsiRequiresReboot"
-            "upgradeCode"    = "$MsiUpgradeCode"
-        }
-        $body.notes = ""
-        $body.owner = ""
-        $body.privacyInformationUrl = $null
-        $body.publisher = $publisher
-        $body.runAs32bit = $false
-        $body.setupFilePath = $SetupFileName
-        $body.uninstallCommandLine = "msiexec /x `"$MsiProductCode`""
-        if ($largeIcon) { $body.largeIcon = $largeIcon }
+    $body = @{
+        "@odata.type"                      = "#microsoft.graph.win32LobApp"
+        description                        = $description
+        developer                          = ""
+        displayName                        = $displayName
+        fileName                           = $filename
+        installCommandLine                 = "$installCommandLine"
+        installExperience                  = @{ "runAsAccount" = "$installExperience" }
+        informationUrl                     = $null
+        isFeatured                         = $false
+        minimumSupportedOperatingSystem    = @{ "v10_1607" = $true }
+        msiInformation                     = $null
+        notes                              = ""
+        owner                              = ""
+        privacyInformationUrl              = $null
+        publisher                          = $publisher
+        runAs32bit                         = $false
+        setupFilePath                      = $SetupFileName
+        uninstallCommandLine               = "$uninstallCommandLine"
     }
-    elseif ($EXE) {
-        $body = @{ "@odata.type" = "#microsoft.graph.win32LobApp" }
-        $body.description = $description
-        $body.developer = ""
-        $body.displayName = $displayName
-        $body.fileName = $filename
-        $body.installCommandLine = "$installCommandLine"
-        $body.installExperience = @{"runAsAccount" = "$installExperience" }
-        $body.informationUrl = $null
-        $body.isFeatured = $false
-        $body.minimumSupportedOperatingSystem = @{"v10_1607" = $true }
-        $body.msiInformation = $null
-        $body.notes = ""
-        $body.owner = ""
-        $body.privacyInformationUrl = $null
-        $body.publisher = $publisher
-        $body.runAs32bit = $false
-        $body.setupFilePath = $SetupFileName
-        $body.uninstallCommandLine = "$uninstallCommandLine"
-        if ($largeIcon) { $body.largeIcon = $largeIcon }
-    }
+    if ($largeIcon) { $body.largeIcon = $largeIcon }
 
     $body
 }
@@ -258,15 +196,8 @@ function Test-SourceFile {
         $SourceFile
     )
 
-    try {
-        if (!(Test-Path "$SourceFile")) {
-            Write-Error "Source File '$SourceFile' doesn't exist..."
-            throw
-        }
-    }
-    catch {
-        Write-Error $_.Exception.Message
-        break
+    if (!(Test-Path "$SourceFile")) {
+        throw "Source File '$SourceFile' doesn't exist"
     }
 }
 
@@ -274,110 +205,34 @@ function New-DetectionRule {
     [cmdletbinding()]
     param
     (
-        [parameter(Mandatory = $true, ParameterSetName = "PowerShell", Position = 1)]
+        [parameter(Mandatory = $true)]
         [Switch]$PowerShell,
 
-        [parameter(Mandatory = $true, ParameterSetName = "MSI", Position = 1)]
-        [Switch]$MSI,
-
-        [parameter(Mandatory = $true, ParameterSetName = "File", Position = 1)]
-        [Switch]$File,
-
-        [parameter(Mandatory = $true, ParameterSetName = "Registry", Position = 1)]
-        [Switch]$Registry,
-
-        [parameter(Mandatory = $true, ParameterSetName = "PowerShell")]
+        [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [String]$ScriptFile,
 
-        [parameter(Mandatory = $true, ParameterSetName = "PowerShell")]
+        [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         $enforceSignatureCheck,
 
-        [parameter(Mandatory = $true, ParameterSetName = "PowerShell")]
+        [parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
-        $runAs32Bit,
-
-        [parameter(Mandatory = $true, ParameterSetName = "MSI")]
-        [ValidateNotNullOrEmpty()]
-        [String]$MSIproductCode,
-
-        [parameter(Mandatory = $true, ParameterSetName = "File")]
-        [ValidateNotNullOrEmpty()]
-        [String]$Path,
-
-        [parameter(Mandatory = $true, ParameterSetName = "File")]
-        [ValidateNotNullOrEmpty()]
-        [string]$FileOrFolderName,
-
-        [parameter(Mandatory = $true, ParameterSetName = "File")]
-        [ValidateSet("notConfigured", "exists", "modifiedDate", "createdDate", "version", "sizeInMB")]
-        [string]$FileDetectionType,
-
-        [parameter(Mandatory = $false, ParameterSetName = "File")]
-        $FileDetectionValue = $null,
-
-        [parameter(Mandatory = $true, ParameterSetName = "File")]
-        [ValidateSet("True", "False")]
-        [string]$check32BitOn64System = "False",
-
-        [parameter(Mandatory = $true, ParameterSetName = "Registry")]
-        [ValidateNotNullOrEmpty()]
-        [String]$RegistryKeyPath,
-
-        [parameter(Mandatory = $true, ParameterSetName = "Registry")]
-        [ValidateSet("notConfigured", "exists", "doesNotExist", "string", "integer", "version")]
-        [string]$RegistryDetectionType,
-
-        [parameter(Mandatory = $false, ParameterSetName = "Registry")]
-        [ValidateNotNullOrEmpty()]
-        [String]$RegistryValue,
-
-        [parameter(Mandatory = $true, ParameterSetName = "Registry")]
-        [ValidateSet("True", "False")]
-        [string]$check32BitRegOn64System = "False"
+        $runAs32Bit
     )
 
-    if ($PowerShell) {
-        if (!(Test-Path "$ScriptFile")) {
-            Write-Error "Could not find file '$ScriptFile'..."
-            Write-Error "Script can't continue..."
-            break
-        }
-
-        $ScriptContent = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes("$ScriptFile"))
-
-        $DR = @{ "@odata.type" = "#microsoft.graph.win32LobAppPowerShellScriptDetection" }
-        $DR.enforceSignatureCheck = $false
-        $DR.runAs32Bit = $false
-        $DR.scriptContent = "$ScriptContent"
-    }
-    elseif ($MSI) {
-        $DR = @{ "@odata.type" = "#microsoft.graph.win32LobAppProductCodeDetection" }
-        $DR.productVersionOperator = "notConfigured"
-        $DR.productCode = "$MsiProductCode"
-        $DR.productVersion = $null
-    }
-    elseif ($File) {
-        $DR = @{ "@odata.type" = "#microsoft.graph.win32LobAppFileSystemDetection" }
-        $DR.check32BitOn64System = "$check32BitOn64System"
-        $DR.detectionType = "$FileDetectionType"
-        $DR.detectionValue = $FileDetectionValue
-        $DR.fileOrFolderName = "$FileOrFolderName"
-        $DR.operator = "notConfigured"
-        $DR.path = "$Path"
-    }
-    elseif ($Registry) {
-        $DR = @{ "@odata.type" = "#microsoft.graph.win32LobAppRegistryDetection" }
-        $DR.check32BitOn64System = "$check32BitRegOn64System"
-        $DR.detectionType = "$RegistryDetectionType"
-        $DR.detectionValue = ""
-        $DR.keyPath = "$RegistryKeyPath"
-        $DR.operator = "notConfigured"
-        $DR.valueName = "$RegistryValue"
+    if (!(Test-Path "$ScriptFile")) {
+        throw "Could not find detection script file '$ScriptFile'"
     }
 
-    return $DR
+    $ScriptContent = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes("$ScriptFile"))
+
+    @{
+        "@odata.type"       = "#microsoft.graph.win32LobAppPowerShellScriptDetection"
+        enforceSignatureCheck = $false
+        runAs32Bit            = $false
+        scriptContent         = "$ScriptContent"
+    }
 }
 
 function Get-DefaultReturnCodes {
@@ -532,39 +387,13 @@ function Invoke-UploadWin32Lob {
         $SetupFileName = $DetectionXML.ApplicationInfo.SetupFile
         $Ext = [System.IO.Path]::GetExtension($SetupFileName)
 
-        if ((($Ext).contains("msi") -or ($Ext).contains("Msi")) -and (!$installCmdLine -or !$uninstallCmdLine)) {
-            $MsiExecutionContext = $DetectionXML.ApplicationInfo.MsiInfo.MsiExecutionContext
-            $MsiPackageType = "DualPurpose"
-            if ($MsiExecutionContext -eq "System") { $MsiPackageType = "PerMachine" }
-            elseif ($MsiExecutionContext -eq "User") { $MsiPackageType = "PerUser" }
-
-            $mobileAppBody = Get-Win32AppBody `
-                -MSI `
-                -displayName "$DisplayName" `
-                -publisher "$publisher" `
-                -description $description `
-                -filename $FileName `
-                -SetupFileName "$SetupFileName" `
-                -installExperience $installExperience `
-                -MsiPackageType $DetectionXML.ApplicationInfo.MsiInfo.MsiPackageType `
-                -MsiProductCode $DetectionXML.ApplicationInfo.MsiInfo.MsiProductCode `
-                -MsiProductName $displayName `
-                -MsiProductVersion $DetectionXML.ApplicationInfo.MsiInfo.MsiProductVersion `
-                -MsiPublisher $DetectionXML.ApplicationInfo.MsiInfo.MsiPublisher `
-                -MsiRequiresReboot ($DetectionXML.ApplicationInfo.MsiInfo.MsiRequiresReboot -eq "true") `
-                -MsiUpgradeCode $DetectionXML.ApplicationInfo.MsiInfo.MsiUpgradeCode `
-                -largeIcon $largeIcon
-        }
-        else {
-            $mobileAppBody = Get-Win32AppBody -EXE -displayName "$DisplayName" -publisher "$publisher" `
-                -description $description -filename $FileName -SetupFileName "$SetupFileName" `
-                -installExperience $installExperience -installCommandLine $installCmdLine `
-                -uninstallCommandLine $uninstallcmdline -largeIcon $largeIcon
-        }
+        $mobileAppBody = Get-Win32AppBody -displayName "$DisplayName" -publisher "$publisher" `
+            -description $description -filename $FileName -SetupFileName "$SetupFileName" `
+            -installExperience $installExperience -installCommandLine $installCmdLine `
+            -uninstallCommandLine $uninstallcmdline -largeIcon $largeIcon
 
         if ($DetectionRules.'@odata.type' -contains "#microsoft.graph.win32LobAppPowerShellScriptDetection" -and @($DetectionRules).'@odata.type'.Count -gt 1) {
-            Write-Warning "Detection rules cannot mix script-based and manual rules"
-            break
+            throw "Detection rules cannot mix script-based and manual rules"
         }
 
         $mobileAppBody | Add-Member -MemberType NoteProperty -Name 'detectionRules' -Value $detectionRules
@@ -636,9 +465,12 @@ function Invoke-UploadWin32Lob {
             Write-Progress -Activity "Sleeping for $($sleep-$i) seconds" -PercentComplete ($i / $sleep * 100) -SecondsRemaining ($sleep - $i)
             Start-Sleep -s 1
         }
+
+        return $mobileApp
     }
     catch {
         Write-Error "Aborting with exception: $($_.Exception.ToString())"
+        throw
     }
 }
 
@@ -710,14 +542,9 @@ function Grant-Win32AppAssignment {
         [ValidateSet("Device", "User", "Both", "None")] [string]$AvailableInstall = "None"
     )
 
-    $Application = Get-IntuneApplication | Where-Object { $_.displayName -eq $AppName -and $_.description -like "*Winget*" }
+    $Application = Get-IntuneApplication | Where-Object { $_.displayName -eq $AppName -and $_.description -like "*Winget*" } | Select-Object -First 1
     if (-not $Application) {
         Write-Error "Application '$AppName' not found in Intune"
-        return
-    }
-    
-    if (-not $Application.id) {
-        Write-Error "Application '$AppName' found but has no ID"
         return
     }
 

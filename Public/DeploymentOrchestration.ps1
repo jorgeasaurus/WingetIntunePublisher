@@ -86,7 +86,7 @@ function Deploy-WinGetApp {
     Write-Verbose "Created: $intunewinPath"
 
     # Brief pause for file system
-    Start-Sleep -Seconds 10
+    Start-Sleep -Seconds 2
 
     # 5.5. Search for app icon
     $appIcon = Get-AppIcon -AppId $AppId -AppName $AppName
@@ -98,21 +98,19 @@ function Deploy-WinGetApp {
     try {
         $appUploadResult = New-Win32App -appid $AppId -appname $AppName -appfile $intunewinPath -installcmd $installCmd -uninstallcmd $uninstallCmd -detectionfile $detectionScriptFile -largeIcon $appIcon
         
-        if ($appUploadResult) {
-            Write-Host "Uploaded $AppName to Intune successfully" -ForegroundColor Green
+        if (-not $appUploadResult) {
+            throw "Upload returned null - no app was created in Intune"
+        }
+
+        Write-Host "Uploaded $AppName to Intune successfully" -ForegroundColor Green
             
-            # 7. Assign groups
-            Grant-Win32AppAssignment -AppName $AppName -InstallGroupId $installGroupId -UninstallGroupId $uninstallGroupId -AvailableInstall $AvailableInstall
-            Write-Host "Assigned groups to $AppName"
-        }
-        else {
-            Write-Host "Failed to upload $AppName to Intune - no app returned" -ForegroundColor Red
-            Write-Verbose "Failed to upload $AppName - no app returned"
-        }
+        # 7. Assign groups
+        Grant-Win32AppAssignment -AppName $AppName -InstallGroupId $installGroupId -UninstallGroupId $uninstallGroupId -AvailableInstall $AvailableInstall
+        Write-Host "Assigned groups to $AppName"
     }
     catch {
-        Write-Host "Error uploading $AppName to Intune: $_" -ForegroundColor Red
-        Write-Verbose "Error uploading $AppName`: $_"
+        Write-Error "Error uploading $AppName to Intune: $_"
+        throw
     }
 
     Write-Host "========== Completed $AppName ==========" -ForegroundColor Green
