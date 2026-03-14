@@ -72,10 +72,9 @@ function Deploy-WinGetApp {
 
     # 4. Create proactive remediation (if licensed)
     if (Test-ProactiveRemediationLicense) {
-        $remediationId = New-ProactiveRemediation -AppId $AppId -AppName $AppName -GroupId $installGroupId
+        New-ProactiveRemediation -AppId $AppId -AppName $AppName -GroupId $installGroupId | Out-Null
     } else {
         Write-Host "Skipping Proactive Remediation creation - not licensed" -ForegroundColor Yellow
-        $remediationId = $null
     }
 
     # 5. Create IntuneWin package

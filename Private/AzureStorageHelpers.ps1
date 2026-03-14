@@ -91,7 +91,8 @@ function Invoke-AzureStorageUpload {
 
             # Renew SAS URI if 7 minutes elapsed
             if ($currentChunk -lt $chunks -and $sasRenewalTimer.ElapsedMilliseconds -ge 450000) {
-                Update-AzureStorageUpload $fileUri
+                $renewedFile = Update-AzureStorageUpload $fileUri
+                $sasUri = $renewedFile.azureStorageUri
                 $sasRenewalTimer.Restart()
             }
         }

@@ -31,7 +31,7 @@ Connect-ToGraph -TenantId $tenantID -AppId $app -AppSecret $secret
         [Parameter(Mandatory = $false)] [string]$Tenant,
         [Parameter(Mandatory = $false)] [string]$AppId,
         [Parameter(Mandatory = $false)] [string]$AppSecret,
-        [Parameter(Mandatory = $false)] [string]$scopes
+        [Parameter(Mandatory = $false)] [string[]]$scopes
     )
 
     process {

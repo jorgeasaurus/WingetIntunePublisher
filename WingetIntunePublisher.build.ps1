@@ -38,7 +38,6 @@ task Analyze {
     Write-Build White "Running PSScriptAnalyzer..."
 
     $analyzerParams = @{
-        Path        = $SourcePath
         Recurse     = $true
         ExcludeRule = @('PSAvoidUsingConvertToSecureStringWithPlainText')  # Required for client credential auth
         Severity    = @('Error', 'Warning')

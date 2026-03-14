@@ -229,8 +229,8 @@ function New-DetectionRule {
 
     @{
         "@odata.type"       = "#microsoft.graph.win32LobAppPowerShellScriptDetection"
-        enforceSignatureCheck = $false
-        runAs32Bit            = $false
+        enforceSignatureCheck = $enforceSignatureCheck
+        runAs32Bit            = $runAs32Bit
         scriptContent         = "$ScriptContent"
     }
 }
@@ -682,5 +682,5 @@ function New-IntuneWinFile {
         $setupfilename,
         $destpath
     )
-    New-IntuneWinPackage -SourcePath "$apppath" -SetupFile "$setupfilename" -DestinationPath "$destpath"
+    New-IntuneWinPackage -SourcePath "$apppath" -SetupFile "$setupfilename" -DestinationPath "$destpath" | Out-Null
 }

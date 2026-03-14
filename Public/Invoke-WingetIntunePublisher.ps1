@@ -101,7 +101,7 @@ Force deployment even if the app already exists in Intune.
         Connect-ToGraph -Tenant $tenant -AppId $clientid -AppSecret $clientsecret
         Write-Verbose "Graph Connection Established"
     } else {
-        Connect-ToGraph -Scopes "DeviceManagementApps.ReadWrite.All, DeviceManagementConfiguration.ReadWrite.All, Group.ReadWrite.All, GroupMember.ReadWrite.All, openid, profile, email, offline_access"
+        Connect-ToGraph -Scopes @("DeviceManagementApps.ReadWrite.All", "DeviceManagementConfiguration.ReadWrite.All", "Group.ReadWrite.All", "GroupMember.ReadWrite.All", "openid", "profile", "email", "offline_access")
     }
     Write-Verbose "Graph connection established"
 
