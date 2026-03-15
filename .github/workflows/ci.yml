@@ -1,5 +1,8 @@
 name: CI/CD Pipeline
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches: ['**']
@@ -151,7 +154,7 @@ jobs:
           Get-ChildItem ./build/*.zip | ForEach-Object { Write-Host "  $($_.Name) - $([math]::Round($_.Length/1KB, 2)) KB" }
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
+        uses: softprops/action-gh-release@v2
         with:
           name: v${{ steps.module_info.outputs.version }}
           body: |
