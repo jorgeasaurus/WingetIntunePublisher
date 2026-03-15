@@ -341,6 +341,19 @@ function New-ProactiveRemediation {
         [Parameter(Mandatory = $true)] [string]$GroupId
     )
 
+    $remediationName = "$AppName Proactive Update"
+
+    # Check for existing remediation
+    $escapedName = $remediationName.Replace("'", "''")
+    $filter = [uri]::EscapeDataString("displayName eq '$escapedName'")
+    $existing = (Invoke-MgGraphRequest -Uri "beta/deviceManagement/deviceHealthScripts?`$filter=$filter" -Method GET -ErrorAction Stop).value
+
+    if ($existing) {
+        Write-Host "Found existing remediation: $remediationName — skipping creation" -ForegroundColor Green
+        Write-Verbose "Existing remediation ID: $($existing[0].id)"
+        return $existing[0].id
+    }
+
     $detectionScript = New-WinGetScript -AppId $AppId -AppName $AppName -ScriptType "Detection"
     $remediationScript = New-WinGetScript -AppId $AppId -AppName $AppName -ScriptType "Remediation"
     
@@ -351,7 +364,7 @@ function New-ProactiveRemediation {
     $body = @{
         "@odata.type"                       = "#microsoft.graph.deviceHealthScript"
         publisher                           = "Winget"
-        displayName                        = "$AppName Proactive Update"
+        displayName                        = $remediationName
         description                        = "Auto-update remediation for $AppName - $descriptionSuffix"
         detectionScriptContent             = $detectionBase64
         remediationScriptContent           = $remediationBase64
@@ -389,6 +402,7 @@ function New-ProactiveRemediation {
     $assignUri = "beta/deviceManagement/deviceHealthScripts/$($result.id)/assign"
     Invoke-MgGraphRequest -Uri $assignUri -Method POST -Body ($assignBody | ConvertTo-Json -Depth 10) -ErrorAction Stop | Out-Null
 
+    Write-Host "Created proactive remediation: $remediationName" -ForegroundColor Green
     Write-Verbose "Created proactive remediation: $($result.displayName) $($result.id)"
 
     return $result.id

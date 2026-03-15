@@ -37,8 +37,30 @@ function Deploy-WinGetApp {
             Write-Host "========== Skipped $AppName ==========" -ForegroundColor Yellow
             return
         }
-        else {
-            Write-Host "Force parameter detected. Proceeding with deployment..." -ForegroundColor Green
+
+        # -Force: remove existing app(s) and remediation before re-creating
+        Write-Host "Force parameter detected. Removing existing resources before redeployment..." -ForegroundColor Green
+        foreach ($app in $existingApp.Apps) {
+            try {
+                Invoke-MgGraphRequest -Uri "beta/deviceAppManagement/mobileApps/$($app.id)" -Method DELETE -ErrorAction Stop | Out-Null
+                Write-Host "  Removed existing app: $($app.displayName) [$($app.id)]" -ForegroundColor Yellow
+            } catch {
+                Write-Warning "  Failed to remove app $($app.id): $_"
+            }
+        }
+
+        # Remove existing proactive remediation to avoid duplicates
+        $remediationName = "$AppName Proactive Update"
+        $escapedRemName = $remediationName.Replace("'", "''")
+        $remFilter = [uri]::EscapeDataString("displayName eq '$escapedRemName'")
+        try {
+            $existingRems = (Invoke-MgGraphRequest -Uri "beta/deviceManagement/deviceHealthScripts?`$filter=$remFilter" -Method GET -ErrorAction Stop).value
+            foreach ($rem in $existingRems) {
+                Invoke-MgGraphRequest -Uri "beta/deviceManagement/deviceHealthScripts/$($rem.id)" -Method DELETE -ErrorAction Stop | Out-Null
+                Write-Host "  Removed existing remediation: $($rem.displayName)" -ForegroundColor Yellow
+            }
+        } catch {
+            Write-Verbose "Could not check/remove existing remediations: $_"
         }
     }
 

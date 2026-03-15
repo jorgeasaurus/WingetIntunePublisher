@@ -649,21 +649,21 @@ function Test-ExistingIntuneApp {
     .PARAMETER AppName
     The display name of the application to check
     .RETURNS
-    Boolean indicating if app exists, and the app object if found
+    Hashtable with Exists (bool) and Apps (array) properties
     #>
     param(
         [Parameter(Mandatory = $true)] [string]$AppName
     )
     
-    $existingApps = Get-IntuneApplication | Where-Object { 
-        $_.displayName -eq $AppName -or 
+    $existingApps = Get-IntuneApplication -AppName $AppName | Where-Object {
+        $_.displayName -eq $AppName -or
         ($_.displayName -like "$AppName*" -and $_.description -like "*Winget*")
     }
     
     if ($existingApps) {
         return @{
             Exists = $true
-            Apps = $existingApps
+            Apps = @($existingApps)
         }
     }
     

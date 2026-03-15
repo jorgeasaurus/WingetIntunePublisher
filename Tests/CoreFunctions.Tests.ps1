@@ -8,9 +8,9 @@ $moduleNames = @(
 foreach ($name in $moduleNames) {
     if (-not (Get-Module -ListAvailable -Name $name)) {
         New-Module -Name $name -ScriptBlock {
-            function Connect-MgGraph {}
+            function Connect-MgGraph { param($Scopes, $TenantId, $ClientSecretCredential, [switch]$NoWelcome) }
             function Get-MgContext {}
-            function Invoke-MgGraphRequest {}
+            function Invoke-MgGraphRequest { param($Uri, $Method, $Body, $OutputType, [switch]$SkipHttpErrorCheck) }
             function Disconnect-MgGraph {}
         } | Import-Module -Force
     }
@@ -167,5 +167,65 @@ Describe 'Connect-ToGraph parameter validation' {
 Describe 'Install-RequiredModule' {
     It 'reports already-installed modules without error' {
         Install-RequiredModule -ModuleName 'Pester' -Confirm:$false
+    }
+}
+
+Describe 'New-ProactiveRemediation duplicate check' {
+    InModuleScope WingetIntunePublisher {
+        It 'skips creation when remediation already exists' {
+            Mock Invoke-MgGraphRequest {
+                if ($Uri -like '*deviceHealthScripts?*') {
+                    return @{ value = @(@{ id = 'existing-rem-123'; displayName = 'TestApp Proactive Update' }) }
+                }
+            }
+            Mock New-WinGetScript { 'script-content' }
+
+            $result = New-ProactiveRemediation -AppId 'Test.App' -AppName 'TestApp' -GroupId 'group-123'
+
+            $result | Should -Be 'existing-rem-123'
+            # Should only call GET (the existence check), never POST (creation)
+            Should -Invoke Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'POST' } -Times 0
+        }
+
+        It 'creates remediation when none exists' {
+            Mock Invoke-MgGraphRequest {
+                if ($Uri -like '*deviceHealthScripts?*' -and $Method -eq 'GET') {
+                    return @{ value = @() }
+                }
+                if ($Uri -like '*deviceHealthScripts' -and $Method -eq 'POST') {
+                    return @{ id = 'new-rem-456'; displayName = 'TestApp Proactive Update' }
+                }
+                if ($Uri -like '*/assign') {
+                    return $null
+                }
+            }
+            Mock New-WinGetScript { 'script-content' }
+
+            $result = New-ProactiveRemediation -AppId 'Test.App' -AppName 'TestApp' -GroupId 'group-123'
+
+            $result | Should -Be 'new-rem-456'
+            Should -Invoke Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'POST' -and $Uri -like '*deviceHealthScripts' -and $Uri -notlike '*/assign' } -Times 1
+        }
+    }
+}
+
+Describe 'Test-ExistingIntuneApp uses server-side filter' {
+    InModuleScope WingetIntunePublisher {
+        It 'passes AppName to Get-IntuneApplication for server-side filtering' {
+            Mock Get-IntuneApplication { @(@{ displayName = 'Chrome'; description = 'Winget app' }) }
+
+            $result = Test-ExistingIntuneApp -AppName 'Chrome'
+
+            $result.Exists | Should -BeTrue
+            Should -Invoke Get-IntuneApplication -ParameterFilter { $AppName -eq 'Chrome' } -Times 1
+        }
+
+        It 'returns false when no matching app found' {
+            Mock Get-IntuneApplication { @() }
+
+            $result = Test-ExistingIntuneApp -AppName 'NonExistent'
+
+            $result.Exists | Should -BeFalse
+        }
     }
 }

@@ -88,6 +88,7 @@ Describe 'Deploy-WinGetApp' {
             InModuleScope WingetIntunePublisher -ArgumentList $script:TestBasePath {
                 param($TestPath)
                 Mock Test-ExistingIntuneApp { @{ Exists = $true; Apps = @(@{ displayName = 'Test App'; id = 'e1' }) } }
+                Mock Invoke-MgGraphRequest { @{ value = @() } }
                 Mock Get-OrCreateAADGroup { 'g1' }
                 Mock New-WinGetScript { 'x' }
                 Mock Test-ProactiveRemediationLicense { $false }
@@ -99,6 +100,8 @@ Describe 'Deploy-WinGetApp' {
                 Deploy-WinGetApp -AppId 'Test.App' -AppName 'Test App' -BasePath $TestPath -Force
 
                 Should -Invoke Test-ExistingIntuneApp -Times 1 -Exactly
+                # Verify old app is deleted before creating new one
+                Should -Invoke Invoke-MgGraphRequest -ParameterFilter { $Method -eq 'DELETE' -and $Uri -like '*mobileApps/e1*' } -Times 1
                 Should -Invoke Get-OrCreateAADGroup -Times 2 -Exactly
                 Should -Invoke New-Win32App -Times 1 -Exactly
             }
