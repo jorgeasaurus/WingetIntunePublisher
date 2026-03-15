@@ -88,6 +88,14 @@ jobs:
           name: module-build
           path: build/WingetIntunePublisher/
 
+      - name: Install Required Modules
+        shell: pwsh
+        run: |
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Microsoft.Graph.Authentication -Force -Scope CurrentUser -AllowClobber
+          Install-Module -Name SvRooij.ContentPrep.Cmdlet -Force -Scope CurrentUser
+          Install-Module -Name powershell-yaml -Force -Scope CurrentUser
+
       - name: List Build Artifacts
         shell: pwsh
         run: |
