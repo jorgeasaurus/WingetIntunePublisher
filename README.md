@@ -39,9 +39,7 @@ This module has undergone comprehensive enterprise security review and implement
 ### PowerShell Modules (Auto-installed)
 
 - `Microsoft.Graph.Authentication` - Graph API authentication
-- `Microsoft.Graph.Groups` - Azure AD group management
 - `SvRooij.ContentPrep.Cmdlet` - IntuneWin package creation
-- `powershell-yaml` - Configuration file parsing
 
 ### Microsoft Graph API Permissions
 
@@ -364,8 +362,6 @@ Remove-WingetIntuneApps -WhatIf
 Remove-WingetIntuneApps -Confirm:$false
 ```
 
-See [Examples/Remove-AllWingetApps.ps1](Examples/Remove-AllWingetApps.ps1) for a complete example script.
-
 ### Resource Identification
 
 All resources created by WingetIntunePublisher are tagged with a standardized description for identification:
@@ -388,7 +384,6 @@ This standardized tagging enables:
 
 - Easy identification of all WingetIntunePublisher resources
 - Bulk operations across all deployed apps
-- Migration from older description formats using [Update-WingetGroupRemediationDescriptions.ps1](Examples/Update-WingetGroupRemediationDescriptions.ps1)
 
 ## 📖 Parameter Reference
 
@@ -418,26 +413,70 @@ This standardized tagging enables:
 
 ```
 WingetIntunePublisher/
+├── .github/workflows/               # CI/CD pipelines
+│   ├── ci.yml                            # PSScriptAnalyzer → Pester tests → Build
+│   └── deploy.yml                        # Manual app deployment to Intune
 ├── Public/                          # Exported functions (user-facing)
 │   ├── Invoke-WingetIntunePublisher.ps1  # Main cmdlet entrypoint
+│   ├── Invoke-PopularAppsDeployment.ps1  # Category-based batch deployment
 │   ├── DeploymentOrchestration.ps1       # Deploy-WinGetApp orchestrator
 │   ├── WingetFunctions.ps1               # WinGet package operations
 │   ├── GraphHelpers.ps1                  # Graph API authentication
 │   ├── UtilityFunctions.ps1              # Logging and utilities
-│   └── Get-PopularAppsByCategory.ps1     # Curated app library
+│   ├── Get-PopularAppsByCategory.ps1     # Curated app library
+│   └── Remove-WingetIntuneApps.ps1       # Cleanup deployed apps
 ├── Private/                         # Internal helper functions
 │   ├── Win32AppHelpers.ps1               # Win32 app creation/upload
 │   ├── AzureStorageHelpers.ps1           # Blob storage chunked upload
 │   ├── GroupManagement.ps1               # Azure AD group operations
 │   └── ScriptGeneration.ps1              # Install/uninstall script generation
-├── Examples/                        # Sample scripts
-│   ├── Remove-AllWingetApps.ps1
-│   └── Update-WingetGroupRemediationDescriptions.ps1
+├── Tests/                           # Pester test suites
+│   ├── WingetIntunePublisher.Tests.ps1   # Module import & integration tests
+│   ├── DeploymentOrchestration.Tests.ps1 # Deployment workflow tests
+│   └── CoreFunctions.Tests.ps1           # Core function unit tests
+├── Dev/                             # Development utilities
+│   └── Check-AppIcon.ps1                 # Icon availability checker
 ├── WingetIntunePublisher.psm1       # Module loader
 ├── WingetIntunePublisher.psd1       # Module manifest
+├── WingetIntunePublisher.build.ps1  # InvokeBuild build script
 └── README.md                        # This file
-
 ```
+
+## 🔄 CI/CD with GitHub Actions
+
+The repository includes two GitHub Actions workflows for automated testing and deployment.
+
+### CI Pipeline (`ci.yml`)
+
+Runs automatically on push to `main` and on pull requests:
+
+1. **Code Quality**: PSScriptAnalyzer linting (Error + Warning severity)
+2. **Build and Test**: Pester tests on Windows (57 tests)
+3. **Publish and Release**: Module packaging (triggered on version tags)
+
+### Deploy Pipeline (`deploy.yml`)
+
+Manual workflow dispatch to deploy apps to Intune:
+
+```yaml
+# Trigger via GitHub Actions UI or CLI:
+gh workflow run deploy.yml -f app_ids="7zip.7zip,Google.Chrome" -f force="true"
+```
+
+**Required GitHub Secrets:**
+
+| Secret | Description |
+|--------|-------------|
+| `TENANT_ID` | Azure AD tenant ID |
+| `CLIENT_ID` | App registration client ID |
+| `CLIENT_SECRET` | App registration client secret |
+
+### Setting Up Your Own Repository
+
+1. Fork or clone this repository
+2. Create an Azure AD App Registration with the [required permissions](#microsoft-graph-api-permissions)
+3. Add `TENANT_ID`, `CLIENT_ID`, and `CLIENT_SECRET` as repository secrets
+4. Trigger the deploy workflow with your desired app IDs
 
 ## 🔍 Troubleshooting
 
@@ -544,10 +583,8 @@ Find-WinGetPackage -Id "Google.Chrome"  # Should return package info
 
 ## 📚 Additional Resources
 
-- **Security Audit**: [VERIFICATION_REPORT.md](VERIFICATION_REPORT.md) - Comprehensive security review
 - **Development Guide**: [CLAUDE.md](CLAUDE.md) - Architecture and contribution guidelines
-- **Applied Fixes**: [ADDITIONAL_FIXES_2025-12-27.md](ADDITIONAL_FIXES_2025-12-27.md) - Recent improvements
-- **Example Scripts**: [Examples/](Examples/) - Ready-to-use deployment scenarios
+- **Changelog**: [CHANGELOG.md](CHANGELOG.md) - Release notes
 
 ### External Documentation
 
@@ -569,29 +606,25 @@ Find-WinGetPackage -Id "Google.Chrome"  # Should return package info
 Contributions welcome via pull requests! Please:
 
 1. Review [CLAUDE.md](CLAUDE.md) for architecture guidelines
-2. Test changes against the 74-app test suite
+2. Run `Invoke-Pester -Path ./Tests` and ensure all tests pass
 3. Update README.md if adding user-facing features
 4. Follow existing PowerShell style conventions
 
 ### License
 
-This project is licensed under the GNU General Public License v3.0 - see [LICENSE](LICENSE) for details.
+This project is licensed under the GNU General Public License v3.0.
 
 ---
 
 ## 🎯 Development Status
 
-**Current Version:** v0.2.0 (Pre-release)
-
-This module is under active development and has not been officially released.
+**Current Version:** v0.2.0
 
 ### Recent Updates
 
-Version 0.2.0 introduces significant enterprise security improvements including enhanced input validation, code injection prevention, secure credential handling, comprehensive error handling, and performance optimizations.
+Version 0.2.0 introduces enterprise security improvements, comprehensive CI/CD via GitHub Actions, extensive bug fixes (pipeline leaks, error propagation, SAS URI renewal), and 57 Pester tests with cross-model code review verification.
 
-**Security Audit Status**: Risk level reduced from HIGH → LOW
-
-See [CHANGELOG.md](CHANGELOG.md) for complete release notes and [VERIFICATION_REPORT.md](VERIFICATION_REPORT.md) for security audit details.
+See [CHANGELOG.md](CHANGELOG.md) for complete release notes.
 
 ---
 
