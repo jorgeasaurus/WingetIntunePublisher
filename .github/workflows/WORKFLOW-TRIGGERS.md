@@ -44,8 +44,8 @@ git checkout main
 git pull origin main
 
 # Create and push a version tag
-git tag v0.2.6
-git push origin v0.2.6
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 Annotated tag with a message:
@@ -69,12 +69,12 @@ gh workflow run "CI/CD Pipeline" --ref feature/my-branch
 
 ## Quick Reference
 
-| Scenario | Command | Jobs Run |
-|----------|---------|----------|
-| Push to any branch | `git push origin <branch>` | build |
-| Open PR | `gh pr create --base main` | build |
-| Release | `git tag v1.0.0 && git push origin v1.0.0` | build, publish, release |
-| Manual | `gh workflow run "CI/CD Pipeline"` | build |
+| Scenario           | Command                                    | Jobs Run                |
+| ------------------ | ------------------------------------------ | ----------------------- |
+| Push to any branch | `git push origin <branch>`                 | build                   |
+| Open PR            | `gh pr create --base main`                 | build                   |
+| Release            | `git tag v1.0.0 && git push origin v1.0.0` | build, publish, release |
+| Manual             | `gh workflow run "CI/CD Pipeline"`         | build                   |
 
 ## Monitoring Workflow Runs
 

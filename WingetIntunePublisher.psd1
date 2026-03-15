@@ -30,6 +30,7 @@
     RequiredModules   = @(
         'Microsoft.Graph.Authentication'
         'SvRooij.ContentPrep.Cmdlet'
+        'powershell-yaml'
     )
 
     # Functions to export from this module
@@ -45,6 +46,7 @@
         'Install-WingetIfNeeded'
         'Install-WinGetPackage'
         'Remove-WingetIntuneApps'
+        'Sync-IntunePortfolio'
         'Uninstall-WinGetPackage'
         'Update-WinGetPackage'
     )
@@ -60,7 +62,7 @@
 
     PrivateData       = @{
         PSData = @{
-            Tags        = @('Winget', 'Intune', 'Graph', 'Win32App', 'Automation')
+            Tags        = @('Winget', 'Intune', 'Graph', 'Win32App', 'Automation', 'GitOps', 'Portfolio')
             ReleaseNotes = 'Pre-release version - Enterprise security improvements including input validation, code injection prevention, secure credential handling, comprehensive error handling, and performance optimization.'
         }
     }

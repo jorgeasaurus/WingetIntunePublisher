@@ -1,0 +1,83 @@
+# Intune App Portfolio
+# Declarative configuration for WingetIntunePublisher
+#
+# Usage:
+#   Sync-IntunePortfolio -Path ./examples/portfolio.yml -WhatIf    # Dry run
+#   Sync-IntunePortfolio -Path ./examples/portfolio.yml             # Deploy
+#   Sync-IntunePortfolio -Path ./examples/portfolio.yml -RemoveAbsent  # Deploy + cleanup
+#
+# GitOps workflow:
+#   1. Edit this file to add/remove apps
+#   2. Open a PR for review
+#   3. On merge, the deploy.yml workflow syncs Intune to match
+
+defaults:
+  availableInstall: User       # User | Device | Both | None
+
+apps:
+  # ── Browsers ──────────────────────────────────────────────
+  - id: Google.Chrome
+    name: Google Chrome
+    availableInstall: Both
+
+  - id: Mozilla.Firefox
+    name: Mozilla Firefox
+
+  - id: Microsoft.Edge
+    name: Microsoft Edge
+
+  # ── Productivity ──────────────────────────────────────────
+  - id: Adobe.Acrobat.Reader.64-bit
+    name: Adobe Acrobat Reader
+
+  - id: Notepad++.Notepad++
+    name: Notepad++
+
+  - id: Microsoft.PowerToys
+    name: PowerToys
+    availableInstall: Device
+
+  # ── Communication ─────────────────────────────────────────
+  - id: Microsoft.Teams
+    name: Microsoft Teams
+    availableInstall: Device
+    groups:
+      install: Org-Teams-Required
+      uninstall: Org-Teams-Uninstall
+
+  - id: SlackTechnologies.Slack
+    name: Slack
+
+  # ── Development ───────────────────────────────────────────
+  - id: Microsoft.VisualStudioCode
+    name: Visual Studio Code
+    availableInstall: Device
+
+  - id: Git.Git
+    name: Git
+
+  - id: Microsoft.PoweShell
+    name: PowerShell
+
+  # ── Utilities ─────────────────────────────────────────────
+  - id: 7zip.7zip
+    name: 7-Zip
+
+  - id: Greenshot.Greenshot
+    name: Greenshot
+
+  - id: Jabra.Direct
+    name: Jabra Direct
+
+  # ── Security ──────────────────────────────────────────────
+  - id: KeePassXCTeam.KeePassXC
+    name: KeePassXC
+
+  # ── Media ─────────────────────────────────────────────────
+  - id: VideoLAN.VLC
+    name: VLC Media Player
+
+  # ── Remote ────────────────────────────────────────────────
+  - id: Microsoft.RemoteDesktopClient
+    name: Microsoft Remote Desktop
+    availableInstall: Device

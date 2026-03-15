@@ -37,6 +37,7 @@ $publicFunctions = @(
     'Install-WingetIfNeeded'
     'Install-WinGetPackage'
     'Remove-WingetIntuneApps'
+    'Sync-IntunePortfolio'
     'Uninstall-WinGetPackage'
     'Update-WinGetPackage'
 )

@@ -15,6 +15,7 @@ Enterprise-grade PowerShell module for automating the packaging and deployment o
 - **Error Resilience**: Individual error handling per app with deployment result tracking
 - **WhatIf Support**: Preview changes before deployment with `-WhatIf`/`-Confirm` parameters
 - **Curated App Library**: 74 popular enterprise applications across 9 categories
+- **Declarative Portfolio Sync**: GitOps-style YAML configuration — define your desired Intune app state and sync it with drift detection
 
 ## 🔒 Security & Quality
 
@@ -40,6 +41,7 @@ This module has undergone comprehensive enterprise security review and implement
 
 - `Microsoft.Graph.Authentication` - Graph API authentication
 - `SvRooij.ContentPrep.Cmdlet` - IntuneWin package creation
+- `powershell-yaml` - YAML parsing for portfolio sync
 
 ### Microsoft Graph API Permissions
 
@@ -66,11 +68,21 @@ Connect-MgGraph -Scopes "DeviceManagementApps.ReadWrite.All","DeviceManagementCo
 
 ## 🚀 Quick Start
 
+### Installation
+
+```powershell
+# Install from PowerShell Gallery
+Install-Module -Name WingetIntunePublisher -Scope CurrentUser
+
+# Or for all users (requires admin)
+Install-Module -Name WingetIntunePublisher -Scope AllUsers
+```
+
 ### Basic Usage
 
 ```powershell
-# Import the module
-Import-Module ./WingetIntunePublisher.psd1
+# Import the module (auto-imported if installed from PSGallery)
+Import-Module WingetIntunePublisher
 
 # Deploy a single app (interactive authentication)
 Invoke-WingetIntunePublisher -appid "Google.Chrome"
@@ -318,6 +330,117 @@ Invoke-PopularAppsDeployment -Category Media `
 
 **Total: 74 curated applications across 9 categories**
 
+## 📋 Declarative Portfolio Sync (GitOps for Intune)
+
+Define your entire Intune app portfolio in a single YAML file and sync it declaratively. `Sync-IntunePortfolio` compares the YAML against your live Intune tenant, deploys missing apps, and optionally removes orphans — like Terraform for Intune apps.
+
+### Portfolio YAML Format
+
+```yaml
+# portfolio.yml
+defaults:
+  availableInstall: User       # User | Device | Both | None
+
+apps:
+  - id: Google.Chrome
+    name: Google Chrome
+    availableInstall: Both     # Override default
+
+  - id: Microsoft.Teams
+    name: Microsoft Teams
+    availableInstall: Device
+    groups:                    # Custom Azure AD group names
+      install: Org-Teams-Required
+      uninstall: Org-Teams-Uninstall
+
+  - id: 7zip.7zip
+    name: 7-Zip
+
+  - id: Notepad++.Notepad++
+    name: Notepad++
+    force: true                # Always redeploy this app
+```
+
+See [`examples/portfolio.yml`](examples/portfolio.yml) for a full 17-app example across 7 categories.
+
+### Drift Detection (Dry Run)
+
+```powershell
+# See what's out of sync without making any changes
+Sync-IntunePortfolio -Path ./portfolio.yml -WhatIf
+```
+
+Output shows a sync plan:
+
+```
+═══════════════════════════════════════════
+  Intune Portfolio Sync Plan
+═══════════════════════════════════════════
+  Portfolio apps: 4 | Deploy: 2 | Up to date: 2 | Orphaned: 1
+
+  TO DEPLOY:
+    + Notepad++.Notepad++ (Notepad++) (new)
+    + 7zip.7zip (7-Zip) (new)
+
+  UP TO DATE:
+    = Google.Chrome (Google Chrome)
+    = Microsoft.Teams (Microsoft Teams)
+
+  ORPHANED (use -RemoveAbsent to remove):
+    - Old Legacy App
+═══════════════════════════════════════════
+```
+
+### Deploy Missing Apps
+
+```powershell
+# Interactive authentication
+Sync-IntunePortfolio -Path ./portfolio.yml
+
+# App-based authentication
+Sync-IntunePortfolio -Path ./portfolio.yml `
+    -Tenant "contoso.onmicrosoft.com" `
+    -ClientId "your-app-guid" `
+    -ClientSecret "your-secret"
+```
+
+### Full Reconciliation
+
+```powershell
+# Deploy missing + remove apps no longer in the YAML
+Sync-IntunePortfolio -Path ./portfolio.yml -RemoveAbsent
+
+# Force redeploy everything
+Sync-IntunePortfolio -Path ./portfolio.yml -Force
+```
+
+### GitOps Workflow
+
+1. **Define** your app portfolio in `portfolio.yml` (checked into Git)
+2. **PR review** — team reviews app additions/removals
+3. **Merge** — the `deploy.yml` GitHub Action syncs Intune to match:
+
+```bash
+gh workflow run deploy.yml -f mode="portfolio" -f portfolio_file="examples/portfolio.yml"
+```
+
+### Result Handling
+
+```powershell
+$results = Sync-IntunePortfolio -Path ./portfolio.yml
+
+# Inspect results
+$results.Deployed   # Apps that were newly deployed
+$results.Skipped    # Apps already up to date
+$results.Removed    # Orphaned apps that were removed
+$results.Failed     # Operations that failed (with .Error details)
+
+# Check for failures
+if ($results.Failed.Count -gt 0) {
+    $results.Failed | ForEach-Object { Write-Host "FAILED: $($_.AppId) — $($_.Error)" }
+}
+```
+
 ## 🔄 What the Script Does
 
 The module automates the entire deployment workflow:
@@ -409,6 +532,31 @@ This standardized tagging enables:
 - `clientid`: Must be valid GUID format
 - `tenant`: Alphanumeric with dots/hyphens only (e.g., `contoso.onmicrosoft.com`)
 
+### Sync-IntunePortfolio
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `-Path` | string | Yes | - | Path to the portfolio YAML file |
+| `-Tenant` | string | No | Interactive | Tenant ID or domain for app-based auth |
+| `-ClientId` | string | No | Interactive | App registration client ID (GUID format) |
+| `-ClientSecret` | string | No | Interactive | App registration client secret |
+| `-Force` | switch | No | `$false` | Force redeployment of all apps, even if already present |
+| `-RemoveAbsent` | switch | No | `$false` | Remove orphaned managed apps not in the portfolio |
+| `-WhatIf` | switch | No | `$false` | Preview sync plan without making changes (drift detection) |
+| `-Confirm` | switch | No | `$true` | Prompt before each deployment or removal operation |
+
+**Portfolio YAML Schema:**
+
+| Field | Level | Required | Default | Description |
+|-------|-------|----------|---------|-------------|
+| `defaults.availableInstall` | Global | No | `User` | Default availability for all apps |
+| `apps[].id` | Per-app | Yes | - | WinGet package ID |
+| `apps[].name` | Per-app | No | Auto-resolved | Display name (resolved from WinGet if omitted) |
+| `apps[].availableInstall` | Per-app | No | Inherits default | Override availability for this app |
+| `apps[].groups.install` | Per-app | No | `{AppName} Required` | Custom install group name |
+| `apps[].groups.uninstall` | Per-app | No | `{AppName} Uninstall` | Custom uninstall group name |
+| `apps[].force` | Per-app | No | `false` | Always redeploy this specific app |
+
 ## 🏗️ Repository Structure
 
 ```
@@ -419,6 +567,7 @@ WingetIntunePublisher/
 ├── Public/                          # Exported functions (user-facing)
 │   ├── Invoke-WingetIntunePublisher.ps1  # Main cmdlet entrypoint
 │   ├── Invoke-PopularAppsDeployment.ps1  # Category-based batch deployment
+│   ├── Sync-IntunePortfolio.ps1          # Declarative portfolio sync (GitOps)
 │   ├── DeploymentOrchestration.ps1       # Deploy-WinGetApp orchestrator
 │   ├── WingetFunctions.ps1               # WinGet package operations
 │   ├── GraphHelpers.ps1                  # Graph API authentication
@@ -429,11 +578,15 @@ WingetIntunePublisher/
 │   ├── Win32AppHelpers.ps1               # Win32 app creation/upload
 │   ├── AzureStorageHelpers.ps1           # Blob storage chunked upload
 │   ├── GroupManagement.ps1               # Azure AD group operations
-│   └── ScriptGeneration.ps1              # Install/uninstall script generation
+│   ├── ScriptGeneration.ps1              # Install/uninstall script generation
+│   └── PortfolioHelpers.ps1              # Portfolio parsing, diffing, reporting
 ├── Tests/                           # Pester test suites
 │   ├── WingetIntunePublisher.Tests.ps1   # Module import & integration tests
 │   ├── DeploymentOrchestration.Tests.ps1 # Deployment workflow tests
-│   └── CoreFunctions.Tests.ps1           # Core function unit tests
+│   ├── CoreFunctions.Tests.ps1           # Core function unit tests
+│   └── Portfolio.Tests.ps1               # Portfolio sync unit tests
+├── Examples/                        # Sample configurations
+│   └── portfolio.yml                     # Example portfolio YAML (17 apps)
 ├── Dev/                             # Development utilities
 │   └── Check-AppIcon.ps1                 # Icon availability checker
 ├── WingetIntunePublisher.psm1       # Module loader
@@ -451,16 +604,24 @@ The repository includes two GitHub Actions workflows for automated testing and d
 Runs automatically on push to `main` and on pull requests:
 
 1. **Code Quality**: PSScriptAnalyzer linting (Error + Warning severity)
-2. **Build and Test**: Pester tests on Windows (57 tests)
+2. **Build and Test**: Pester tests on Windows (106 tests)
 3. **Publish and Release**: Module packaging (triggered on version tags)
 
 ### Deploy Pipeline (`deploy.yml`)
 
-Manual workflow dispatch to deploy apps to Intune:
+Manual workflow dispatch to deploy apps to Intune. Supports two modes:
 
-```yaml
-# Trigger via GitHub Actions UI or CLI:
-gh workflow run deploy.yml -f app_ids="7zip.7zip,Google.Chrome" -f force="true"
+**App IDs mode** — deploy specific apps imperatively:
+
+```bash
+gh workflow run deploy.yml -f mode="app_ids" -f app_ids="7zip.7zip,Google.Chrome" -f force="true"
+```
+
+**Portfolio mode** — declarative sync from a YAML file:
+
+```bash
+gh workflow run deploy.yml -f mode="portfolio" -f portfolio_file="examples/portfolio.yml"
+gh workflow run deploy.yml -f mode="portfolio" -f portfolio_file="examples/portfolio.yml" -f remove_absent="true"
 ```
 
 **Required GitHub Secrets:**
@@ -622,7 +783,7 @@ This project is licensed under the GNU General Public License v3.0.
 
 ### Recent Updates
 
-Version 0.2.0 introduces enterprise security improvements, comprehensive CI/CD via GitHub Actions, extensive bug fixes (pipeline leaks, error propagation, SAS URI renewal), and 57 Pester tests with cross-model code review verification.
+Version 0.2.0 introduces enterprise security improvements, comprehensive CI/CD via GitHub Actions, declarative portfolio sync (`Sync-IntunePortfolio`) with GitOps-style YAML configuration, extensive bug fixes (pipeline leaks, error propagation, SAS URI renewal), and 106 Pester tests with cross-model code review verification.
 
 See [CHANGELOG.md](CHANGELOG.md) for complete release notes.
 

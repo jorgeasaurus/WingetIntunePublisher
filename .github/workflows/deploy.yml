@@ -3,12 +3,25 @@ name: Deploy Apps to Intune
 on:
   workflow_dispatch:
     inputs:
-      app_ids:
-        description: 'Comma-separated WinGet App IDs (e.g., 7zip.7zip,Notepad++.Notepad++)'
+      mode:
+        description: 'Deployment mode'
         required: true
+        default: 'app_ids'
+        type: choice
+        options:
+          - app_ids
+          - portfolio
+      app_ids:
+        description: 'Comma-separated WinGet App IDs (app_ids mode only)'
+        required: false
+        type: string
+      portfolio_file:
+        description: 'Path to portfolio YAML file (portfolio mode only, e.g., examples/portfolio.yml)'
+        required: false
+        default: 'examples/portfolio.yml'
         type: string
       available_install:
-        description: 'Make app available to User, Device, Both, or None'
+        description: 'Make app available to User, Device, Both, or None (app_ids mode only)'
         required: false
         default: 'User'
         type: choice
@@ -19,6 +32,11 @@ on:
           - None
       force:
         description: 'Force deployment even if app already exists'
+        required: false
+        default: false
+        type: boolean
+      remove_absent:
+        description: 'Remove orphaned managed apps not in portfolio (portfolio mode only)'
         required: false
         default: false
         type: boolean
@@ -41,6 +59,7 @@ jobs:
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module -Name Microsoft.Graph.Authentication -Force -Scope CurrentUser -AllowClobber
           Install-Module -Name SvRooij.ContentPrep.Cmdlet -Force -Scope CurrentUser
+          Install-Module -Name powershell-yaml -Force -Scope CurrentUser
 
       - name: Deploy Applications
         shell: pwsh
@@ -51,33 +70,71 @@ jobs:
         run: |
           Import-Module ./WingetIntunePublisher.psd1 -Force
 
-          $appIds = '${{ github.event.inputs.app_ids }}' -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+          $mode = '${{ github.event.inputs.mode }}'
 
-          if (-not $appIds) {
-            throw "No app IDs provided"
+          if ($mode -eq 'portfolio') {
+            # ── Portfolio mode: declarative sync ──
+            $portfolioFile = '${{ github.event.inputs.portfolio_file }}'
+            if (-not (Test-Path $portfolioFile)) {
+              throw "Portfolio file not found: $portfolioFile"
+            }
+
+            Write-Host "Syncing Intune to portfolio: $portfolioFile" -ForegroundColor Cyan
+
+            $params = @{
+              Path         = $portfolioFile
+              Tenant       = $env:TENANT_ID
+              ClientId     = $env:CLIENT_ID
+              ClientSecret = $env:CLIENT_SECRET
+              Confirm      = $false
+            }
+
+            if ('${{ github.event.inputs.force }}' -eq 'true') {
+              $params['Force'] = $true
+            }
+
+            if ('${{ github.event.inputs.remove_absent }}' -eq 'true') {
+              $params['RemoveAbsent'] = $true
+            }
+
+            $results = Sync-IntunePortfolio @params
+
+            if ($results.Failed.Count -gt 0) {
+              Write-Host "`nFailed operations:" -ForegroundColor Red
+              $results.Failed | ForEach-Object { Write-Host "  - $($_.Name): $($_.Error)" -ForegroundColor Red }
+              throw "$($results.Failed.Count) operation(s) failed"
+            }
+
+          } else {
+            # ── App IDs mode: imperative deployment ──
+            $appIds = '${{ github.event.inputs.app_ids }}' -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+
+            if (-not $appIds) {
+              throw "No app IDs provided"
+            }
+
+            Write-Host "Deploying $($appIds.Count) app(s): $($appIds -join ', ')" -ForegroundColor Cyan
+
+            $params = @{
+              appid            = $appIds
+              tenant           = $env:TENANT_ID
+              clientid         = $env:CLIENT_ID
+              clientsecret     = $env:CLIENT_SECRET
+              availableinstall = '${{ github.event.inputs.available_install }}'
+            }
+
+            if ('${{ github.event.inputs.force }}' -eq 'true') {
+              $params['Force'] = $true
+            }
+
+            $results = Invoke-WingetIntunePublisher @params
+
+            $failed = $results | Where-Object Status -eq 'Failed'
+            if ($failed) {
+              Write-Host "`nFailed deployments:" -ForegroundColor Red
+              $failed | ForEach-Object { Write-Host "  - $($_.AppName): $($_.Error)" -ForegroundColor Red }
+              throw "$($failed.Count) app(s) failed to deploy"
+            }
+
+            Write-Host "`nAll $($results.Count) app(s) deployed successfully!" -ForegroundColor Green
           }
-
-          Write-Host "Deploying $($appIds.Count) app(s): $($appIds -join ', ')" -ForegroundColor Cyan
-
-          $params = @{
-            appid            = $appIds
-            tenant           = $env:TENANT_ID
-            clientid         = $env:CLIENT_ID
-            clientsecret     = $env:CLIENT_SECRET
-            availableinstall = '${{ github.event.inputs.available_install }}'
-          }
-
-          if ('${{ github.event.inputs.force }}' -eq 'true') {
-            $params['Force'] = $true
-          }
-
-          $results = Invoke-WingetIntunePublisher @params
-
-          $failed = $results | Where-Object Status -eq 'Failed'
-          if ($failed) {
-            Write-Host "`nFailed deployments:" -ForegroundColor Red
-            $failed | ForEach-Object { Write-Host "  - $($_.AppName): $($_.Error)" -ForegroundColor Red }
-            throw "$($failed.Count) app(s) failed to deploy"
-          }
-
-          Write-Host "`nAll $($results.Count) app(s) deployed successfully!" -ForegroundColor Green
