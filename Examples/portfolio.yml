@@ -13,6 +13,7 @@
 
 defaults:
   availableInstall: User       # User | Device | Both | None
+  remediation: true            # Create Proactive Remediation scripts (default: true)
 
 apps:
   # ── Browsers ──────────────────────────────────────────────
@@ -58,6 +59,9 @@ apps:
 
   - id: Microsoft.PoweShell
     name: PowerShell
+  
+  - id: Microsoft.WindowsTerminal
+    name: Windows Terminal
 
   # ── Utilities ─────────────────────────────────────────────
   - id: 7zip.7zip
@@ -66,12 +70,13 @@ apps:
   - id: Greenshot.Greenshot
     name: Greenshot
 
-  - id: Jabra.Direct
-    name: Jabra Direct
+  - id: JanDeDobbeleer.OhMyPosh
+    name: Oh My Posh
 
   # ── Security ──────────────────────────────────────────────
   - id: KeePassXCTeam.KeePassXC
     name: KeePassXC
+    remediation: false          # Skip auto-update remediation for this app
 
   # ── Media ─────────────────────────────────────────────────
   - id: VideoLAN.VLC

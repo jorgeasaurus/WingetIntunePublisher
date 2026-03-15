@@ -18,7 +18,8 @@ function Deploy-WinGetApp {
         [string]$InstallGroupName,
         [string]$UninstallGroupName,
         [ValidateSet("Device", "User", "Both", "None")] [string]$AvailableInstall = "None",
-        [switch]$Force
+        [switch]$Force,
+        [bool]$Remediation = $true
     )
 
     Write-Host "========== Deploying $AppName ($AppId) ==========" -ForegroundColor Cyan
@@ -92,9 +93,11 @@ function Deploy-WinGetApp {
     New-WinGetScript -AppId $AppId -AppName $AppName -ScriptType "DetectionRemediation" | Out-File $detectionScriptFile -Encoding utf8
     Write-Verbose "Created: $detectionScriptFile"
 
-    # 4. Create proactive remediation (if licensed)
-    if (Test-ProactiveRemediationLicense) {
+    # 4. Create proactive remediation (if enabled and licensed)
+    if ($Remediation -and (Test-ProactiveRemediationLicense)) {
         New-ProactiveRemediation -AppId $AppId -AppName $AppName -GroupId $installGroupId | Out-Null
+    } elseif (-not $Remediation) {
+        Write-Host "Skipping Proactive Remediation creation - disabled for this app" -ForegroundColor Yellow
     } else {
         Write-Host "Skipping Proactive Remediation creation - not licensed" -ForegroundColor Yellow
     }

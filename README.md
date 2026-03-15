@@ -359,6 +359,7 @@ apps:
   - id: Notepad++.Notepad++
     name: Notepad++
     force: true                # Always redeploy this app
+    remediation: false         # Skip auto-update remediation
 ```
 
 See [`examples/portfolio.yml`](examples/portfolio.yml) for a full 17-app example across 7 categories.
@@ -556,6 +557,8 @@ This standardized tagging enables:
 | `apps[].groups.install` | Per-app | No | `{AppName} Required` | Custom install group name |
 | `apps[].groups.uninstall` | Per-app | No | `{AppName} Uninstall` | Custom uninstall group name |
 | `apps[].force` | Per-app | No | `false` | Always redeploy this specific app |
+| `defaults.remediation` | Global | No | `true` | Create Proactive Remediation scripts for auto-updates |
+| `apps[].remediation` | Per-app | No | Inherits default | Override remediation creation for this app |
 
 ## 🏗️ Repository Structure
 

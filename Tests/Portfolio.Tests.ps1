@@ -105,6 +105,51 @@ apps:
         $result[0].AvailableInstall | Should -Be 'User'
     }
 
+    It 'defaults remediation to true' {
+        $yaml = @"
+apps:
+  - id: Google.Chrome
+"@
+        $file = Join-Path $testDir "rem-default.yml"
+        Set-Content -Path $file -Value $yaml
+
+        $result = Read-PortfolioFile -Path $file
+        $result[0].Remediation | Should -BeTrue
+    }
+
+    It 'inherits remediation false from defaults' {
+        $yaml = @"
+defaults:
+  remediation: false
+apps:
+  - id: Google.Chrome
+  - id: 7zip.7zip
+"@
+        $file = Join-Path $testDir "rem-defaults-false.yml"
+        Set-Content -Path $file -Value $yaml
+
+        $result = Read-PortfolioFile -Path $file
+        $result[0].Remediation | Should -BeFalse
+        $result[1].Remediation | Should -BeFalse
+    }
+
+    It 'allows per-app remediation override' {
+        $yaml = @"
+defaults:
+  remediation: true
+apps:
+  - id: Google.Chrome
+    remediation: false
+  - id: 7zip.7zip
+"@
+        $file = Join-Path $testDir "rem-override.yml"
+        Set-Content -Path $file -Value $yaml
+
+        $result = Read-PortfolioFile -Path $file
+        $result[0].Remediation | Should -BeFalse
+        $result[1].Remediation | Should -BeTrue
+    }
+
     It 'throws on empty apps list' {
         $yaml = @"
 apps: []
@@ -731,6 +776,53 @@ apps:
 
                 Should -Invoke Deploy-WinGetApp -ParameterFilter {
                     $Force -eq $true
+                } -Times 1
+            }
+        }
+
+        It 'passes Remediation true by default to Deploy-WinGetApp' {
+            InModuleScope WingetIntunePublisher -ArgumentList $script:PortfolioTestDir {
+                param($TestDir)
+                $yaml = @"
+apps:
+  - id: Default.Rem
+    name: Default Rem
+"@
+                $file = Join-Path $TestDir "rem-default.yml"
+                Set-Content -Path $file -Value $yaml
+
+                Mock Connect-ToGraph {}
+                Mock Get-IntuneApplication { @() }
+                Mock Deploy-WinGetApp {}
+
+                Sync-IntunePortfolio -Path $file -Confirm:$false
+
+                Should -Invoke Deploy-WinGetApp -ParameterFilter {
+                    $Remediation -eq $true
+                } -Times 1
+            }
+        }
+
+        It 'passes Remediation false when disabled per-app' {
+            InModuleScope WingetIntunePublisher -ArgumentList $script:PortfolioTestDir {
+                param($TestDir)
+                $yaml = @"
+apps:
+  - id: NoRem.App
+    name: No Remediation
+    remediation: false
+"@
+                $file = Join-Path $TestDir "rem-disabled.yml"
+                Set-Content -Path $file -Value $yaml
+
+                Mock Connect-ToGraph {}
+                Mock Get-IntuneApplication { @() }
+                Mock Deploy-WinGetApp {}
+
+                Sync-IntunePortfolio -Path $file -Confirm:$false
+
+                Should -Invoke Deploy-WinGetApp -ParameterFilter {
+                    $Remediation -eq $false
                 } -Times 1
             }
         }

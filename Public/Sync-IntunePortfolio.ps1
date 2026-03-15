@@ -194,6 +194,7 @@ function Sync-IntunePortfolio {
                 if ($app.InstallGroupName) { $deployParams['InstallGroupName'] = $app.InstallGroupName }
                 if ($app.UninstallGroupName) { $deployParams['UninstallGroupName'] = $app.UninstallGroupName }
                 if ($app.Force) { $deployParams['Force'] = $true }
+                $deployParams['Remediation'] = $app.Remediation
 
                 Deploy-WinGetApp @deployParams
 

@@ -36,6 +36,11 @@ function Read-PortfolioFile {
         $defaultAvailableInstall = $portfolio.defaults.availableInstall
     }
 
+    $defaultRemediation = $true
+    if ($portfolio.defaults -and $null -ne $portfolio.defaults.remediation) {
+        $defaultRemediation = [bool]$portfolio.defaults.remediation
+    }
+
     $entries = [System.Collections.Generic.List[PSCustomObject]]::new()
     $seenIds = @{}
 
@@ -67,6 +72,7 @@ function Read-PortfolioFile {
             InstallGroupName   = if ($app.groups -and $app.groups.install) { $app.groups.install } else { $null }
             UninstallGroupName = if ($app.groups -and $app.groups.uninstall) { $app.groups.uninstall } else { $null }
             Force              = if ($app.force) { [bool]$app.force } else { $false }
+            Remediation        = if ($null -ne $app.remediation) { [bool]$app.remediation } else { $defaultRemediation }
         }
 
         $entries.Add($entry)
