@@ -41,6 +41,7 @@ $requiredModules = @(
     @{ Name = 'PSScriptAnalyzer'; MinimumVersion = '1.21.0' }
     @{ Name = 'Microsoft.Graph.Authentication'; MinimumVersion = '2.0.0' }
     @{ Name = 'SvRooij.ContentPrep.Cmdlet'; MinimumVersion = '0.0.0' }
+    @{ Name = 'powershell-yaml'; MinimumVersion = '0.4.0' }
 )
 
 # Install/update required modules
